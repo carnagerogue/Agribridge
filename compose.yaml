@@ -1,0 +1,116 @@
+name: agribridge
+
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agribridge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+    secrets:
+      - postgres_admin_password
+      - postgres_app_password
+      - postgres_server_certificate
+      - postgres_server_key
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-agribridge.sh:ro
+      - ./deploy/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    # The official entrypoint drops to the postgres user after secret file preparation.
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        install -d -m 700 -o postgres -g postgres /tmp/postgres-bootstrap
+        install -m 600 -o postgres -g postgres /run/secrets/postgres_server_key /tmp/postgres-bootstrap/server.key
+        install -m 644 -o postgres -g postgres /run/secrets/postgres_server_certificate /tmp/postgres-bootstrap/server.crt
+        install -m 600 -o postgres -g postgres /run/secrets/postgres_app_password /tmp/postgres-bootstrap/app-password
+        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_min_protocol_version=TLSv1.2 -c ssl_cert_file=/tmp/postgres-bootstrap/server.crt -c ssl_key_file=/tmp/postgres-bootstrap/server.key -c hba_file=/etc/postgresql/pg_hba.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d agribridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 60s
+    shm_size: 128mb
+    networks: [database]
+
+  app:
+    build:
+      context: .
+      target: runtime
+    image: agribridge:${AGRIBRIDGE_IMAGE_TAG:-local}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      AGRIBRIDGE_DEMO: "false"
+      HOST: 0.0.0.0
+      PORT: "3001"
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the exact public HTTPS origin}
+      DATABASE_URL: ${DATABASE_URL:?Set PostgreSQL URL for agribridge_app at db:5432/agribridge}
+      DATABASE_TLS: "true"
+      NODE_EXTRA_CA_CERTS: /run/secrets/postgres_ca
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+      OPEN_METEO_BASE_URL: ${OPEN_METEO_BASE_URL:-}
+      OPEN_METEO_API_KEY: ${OPEN_METEO_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_DAILY_REQUEST_LIMIT: ${AI_DAILY_REQUEST_LIMIT:-100}
+      AI_USER_DAILY_REQUEST_LIMIT: ${AI_USER_DAILY_REQUEST_LIMIT:-10}
+      MESSAGING_DAILY_LIMIT: ${MESSAGING_DAILY_LIMIT:-200}
+      MESSAGING_TENANT_DAILY_LIMIT: ${MESSAGING_TENANT_DAILY_LIMIT:-100}
+      MESSAGING_RECIPIENT_DAILY_LIMIT: ${MESSAGING_RECIPIENT_DAILY_LIMIT:-5}
+      CHANNEL_ORGANIZATION_ID: ${CHANNEL_ORGANIZATION_ID:-}
+      AT_USERNAME: ${AT_USERNAME:-}
+      AT_API_KEY: ${AT_API_KEY:-}
+      AT_SENDER_ID: ${AT_SENDER_ID:-}
+      AT_ENVIRONMENT: ${AT_ENVIRONMENT:-}
+      AT_WEBHOOK_SECRET: ${AT_WEBHOOK_SECRET:-}
+      AT_USSD_SERVICE_CODE: ${AT_USSD_SERVICE_CODE:-}
+      SMS_MAX_SEGMENTS: ${SMS_MAX_SEGMENTS:-3}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+    secrets:
+      - postgres_ca
+    ports:
+      # HTTPS ingress on this host is the only public entry point.
+      - "127.0.0.1:3001:3001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 512m
+    stop_grace_period: 15s
+    networks: [database, outbound]
+
+volumes:
+  postgres_data:
+
+networks:
+  database:
+    internal: true
+  outbound:
+
+secrets:
+  postgres_admin_password:
+    file: ${POSTGRES_ADMIN_PASSWORD_FILE:?Provide a PostgreSQL administrator password file}
+  postgres_app_password:
+    file: ${POSTGRES_APP_PASSWORD_FILE:?Provide a distinct application database password file}
+  postgres_server_certificate:
+    file: ${POSTGRES_TLS_CERT_FILE:?Provide PostgreSQL TLS certificate with DNS SAN db}
+  postgres_server_key:
+    file: ${POSTGRES_TLS_KEY_FILE:?Provide PostgreSQL TLS private key}
+  postgres_ca:
+    file: ${POSTGRES_CA_FILE:?Provide the issuing CA certificate}

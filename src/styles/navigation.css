@@ -1,0 +1,152 @@
+/* Shell can load before global.css. Establish the complete order before naming
+   a layer so legacy responsive rules cannot override these refinements. */
+@layer reset, base, components, responsive, refinement;
+@layer refinement {
+  .app-shell .sidebar .sidebar-navigation.simple-navigation {
+    gap: 0;
+    padding: 2px;
+  }
+  .simple-navigation .navigation-core,
+  .simple-navigation .navigation-tools,
+  .simple-navigation .navigation-group-links {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 4px;
+    min-width: 0;
+  }
+  .simple-navigation .navigation-group-links[hidden] {
+    display: none;
+  }
+  .app-shell .sidebar .simple-navigation .navigation-core > a {
+    min-height: 52px;
+    padding: 12px 10px;
+    font-size: 15px;
+    line-height: 1.4;
+    gap: 14px;
+  }
+  .app-shell .sidebar .simple-navigation .navigation-core > a > svg {
+    width: 22px;
+    height: 22px;
+  }
+  .simple-navigation .navigation-core > a > span {
+    min-width: 0;
+  }
+  .simple-navigation .navigation-tools {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .simple-navigation .navigation-group-toggle {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) 17px;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 8px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .simple-navigation .navigation-group-toggle:hover {
+    background: #e6efe7;
+  }
+  .simple-navigation .navigation-group-toggle.has-active-route {
+    color: var(--green);
+    font-weight: 650;
+  }
+  .simple-navigation
+    .navigation-group-toggle[aria-expanded="true"]
+    > svg:last-child {
+    transform: rotate(180deg);
+  }
+  .simple-navigation .navigation-group-links {
+    margin: 0 0 10px 18px;
+    padding-left: 7px;
+    border-left: 1px solid #cedbcf;
+  }
+  .app-shell .sidebar .simple-navigation .navigation-group-links > a {
+    min-height: 44px;
+    padding: 10px 7px;
+    gap: 9px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .app-shell .sidebar .workspace-name {
+    padding-block: 17px 15px;
+  }
+  .app-shell .sidebar-bottom > a:first-child {
+    font-size: 12px;
+  }
+  .app-shell .breadcrumbs {
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .app-shell .breadcrumbs > strong {
+    font-weight: 500;
+  }
+  .mobile-menu-trigger {
+    display: none;
+  }
+  .mobile-workspace-status {
+    display: none;
+  }
+  @media (max-width: 960px) {
+    .app-shell .topbar-right {
+      display: none;
+    }
+    .app-shell .topbar {
+      justify-content: space-between;
+    }
+    .mobile-menu-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-shrink: 0;
+      min-height: 44px;
+      padding: 8px 0 8px 10px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 550;
+      background: transparent;
+      border: 0;
+    }
+    .mobile-workspace-status {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 16px;
+      padding: 8px var(--page-gutter);
+      color: var(--muted);
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+    }
+    .mobile-workspace-status > a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+    }
+    .app-shell .mobile-nav a {
+      font-size: 12px;
+      gap: 6px;
+    }
+    .app-shell .mobile-nav {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .app-shell .sidebar .simple-navigation .navigation-group-links > a {
+      font-size: 14px;
+    }
+    .simple-navigation .navigation-group-toggle {
+      font-size: 15px;
+    }
+  }
+}

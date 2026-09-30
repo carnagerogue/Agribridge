@@ -1,0 +1,126 @@
+.home-weather {
+  background: #fffae4;
+  border-color: #eee7c8;
+}
+.home-weather-body {
+  padding: 0 18px 18px;
+}
+.home-data-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #62644e;
+  margin: 0 0 12px;
+}
+.home-weather-reading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.home-weather-reading > strong {
+  font-size: 39px;
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+.home-weather-reading > strong span {
+  font-size: 21px;
+}
+.home-weather-reading > span {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.home-data-rain {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.home-data-rain svg {
+  flex-shrink: 0;
+}
+.home-data-source {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #626653;
+  margin: 10px 0 13px;
+}
+.home-data-warning {
+  font-size: 12px;
+  color: #81521f;
+  line-height: 1.5;
+}
+.home-data-empty {
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 0;
+  min-height: 60px;
+}
+.home-market-source {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  margin-top: 18px;
+}
+.home-market-icon {
+  flex-shrink: 0;
+  padding: 13px;
+  border-radius: 12px;
+  background: #edf3ec;
+  color: var(--green);
+}
+.home-market-copy {
+  flex: 1;
+  min-width: 0;
+}
+.home-market-copy h2 {
+  font-size: 17px;
+  margin: 0 0 7px;
+  letter-spacing: -0.025em;
+}
+.home-market-copy > p:not(.home-data-source) {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 640px;
+}
+.home-market-copy .home-data-source {
+  margin-bottom: 0;
+}
+.home-market-source > .button {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .home-weather {
+    order: 1;
+  }
+  .home-weather .panel-header {
+    padding: 16px 18px 12px;
+  }
+  .home-weather-reading {
+    margin: 8px 0;
+  }
+  .home-weather-reading > strong {
+    font-size: 34px;
+  }
+  .home-market-source {
+    flex-wrap: wrap;
+    gap: 13px;
+    padding: 18px;
+  }
+  .home-market-icon {
+    display: none;
+  }
+  .home-market-copy {
+    flex-basis: 100%;
+  }
+  .home-market-source > .button {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

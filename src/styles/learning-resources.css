@@ -1,0 +1,221 @@
+.learn-workspace {
+  max-width: 960px;
+}
+.learning-view-switch {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.learning-view-switch > button {
+  min-height: 48px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: left;
+}
+.learning-view-switch > button[aria-pressed="true"] {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  font-weight: 650;
+}
+.fao-learning {
+  max-width: 780px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.learning-site-note {
+  margin: 0 0 24px;
+  color: var(--muted);
+  max-width: 65ch;
+}
+.learning-topic-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.learning-topic-picker > button {
+  min-height: 48px;
+  padding: 11px 17px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--green);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.learning-topic-picker > button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+.learning-resource {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+.learning-resource h2 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: clamp(21px, 2.2vw, 25px);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-wrap: pretty;
+}
+.learning-resource-meta,
+.learning-resource-access {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.learning-resource-meta {
+  margin: 0 0 18px;
+}
+.learning-resource-summary {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.learning-resource-access {
+  margin: 0 0 18px;
+}
+.learning-resource-caution {
+  margin: 0 0 20px;
+  padding-left: 14px;
+  border-left: 3px solid #b48932;
+  color: #6a552c;
+  font-size: 15px;
+}
+.learning-external {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 48px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: normal;
+  text-align: left;
+}
+.learning-external.text-link {
+  justify-content: flex-start;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+}
+.learning-external:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.learning-access-details {
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.learning-access-details > summary,
+.learning-more > summary,
+.learning-about > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--green);
+  font-size: 16px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+.learning-access-details > summary::-webkit-details-marker,
+.learning-more > summary::-webkit-details-marker,
+.learning-about > summary::-webkit-details-marker {
+  display: none;
+}
+.learning-access-details[open] > summary svg,
+.learning-more[open] > summary svg,
+.learning-about[open] > summary svg {
+  transform: rotate(180deg);
+}
+.learning-access-details p,
+.learning-about p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin: 14px 0;
+}
+.learning-more,
+.learning-about {
+  padding: 10px 0;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.learning-more-list {
+  display: grid;
+  gap: 16px;
+  margin: 12px 0;
+}
+.learning-reference-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+.local-guide-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.local-guide-heading h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.local-guide-library .learning-intro h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+}
+.local-guide-library .lesson-meta {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .learning-view-switch {
+    gap: 20px;
+  }
+  .learning-view-switch > button {
+    flex: 1;
+    min-width: 0;
+  }
+  .learning-topic-picker {
+    gap: 8px;
+  }
+  .learning-topic-picker > button {
+    flex: 1 1 125px;
+    padding: 10px 12px;
+  }
+  .learning-resource {
+    padding: 20px;
+  }
+  .learning-resource > .learning-external {
+    width: 100%;
+  }
+  .learning-reference-links {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
