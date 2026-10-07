@@ -202,10 +202,17 @@ export default function Landing() {
             </p>
           </div>
           <picture className="lp-hero-image">
+            {/* Phones get the smallest image whatever their pixel density:
+                mobile data is expensive for the people this page serves. */}
+            <source
+              media="(max-width: 760px)"
+              type="image/webp"
+              srcSet="/images/agribridge-landscape-640.webp"
+            />
             <source
               type="image/webp"
               srcSet="/images/agribridge-landscape-640.webp 640w, /images/agribridge-landscape-1024.webp 1024w, /images/agribridge-landscape-1536.webp 1536w"
-              sizes="(max-width: 760px) 100vw, 58vw"
+              sizes="58vw"
             />
             <img
               src="/images/agribridge-landscape-1024.webp"

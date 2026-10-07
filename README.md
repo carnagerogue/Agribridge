@@ -71,10 +71,15 @@ npm run typecheck
 npm run build:server
 npm run build
 npm test
+npm run test:e2e
 npm audit --audit-level=high
 ```
 
 Tests use mocked external providers and local databases; they do not send real messages or require an OpenAI key. CI runs the same checks without deployment secrets or automatic production deployment.
+
+`npm run test:e2e` builds the web app and drives the main farmer and cooperative journeys in Chromium on a low-end Android profile (360×640) with a constrained 3G connection and a 4× slower CPU. It covers the public introduction's download budget (250 KB on a first visit), completing a task, an offline change syncing on reconnect, reopening a saved workspace with no connection, dated forecasts, dated public prices and role-restricted navigation. The test server answers weather, warning and price requests with fixed fictional data and refuses any other outbound request. Install the browser once with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium.
+
+Built text assets ship with Brotli and gzip copies. The server sends the smallest copy the browser accepts and lets browsers keep content-hashed assets for a year.
 
 The compiled application runs with `npm start`. Production additionally requires `NODE_ENV=production`, `AGRIBRIDGE_DEMO=false`, certificate-verified PostgreSQL and an exact HTTPS `PUBLIC_ORIGIN`. The [deployment runbook](docs/deployment.md) covers the nonroot Docker image, TLS PostgreSQL Compose stack, administrator provisioning, backup/restore and release checks. Container startup still needs verification on a Docker-capable deployment host.
 

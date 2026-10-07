@@ -17,3 +17,4 @@ backups/
 *.crt
 *.p12
 *.pfx
+playwright-report/
