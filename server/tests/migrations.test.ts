@@ -67,6 +67,7 @@ const isTable = async (db: Database, table: string) =>
       [table],
     )
   ).rows[0].present;
+const ALL_VERSIONS = MIGRATIONS.map((migration) => migration.version);
 const appliedVersions = async (db: Database) =>
   (
     await db.query<{ version: number }>(
@@ -416,9 +417,9 @@ const legacyRecords: Legacy[] = [
 
 test("a fresh database applies every migration once and records it", async () =>
   withDatabase(async (db) => {
-    assert.deepEqual(await migrate(db), [1, 2]);
+    assert.deepEqual(await migrate(db), ALL_VERSIONS);
     assert.deepEqual(await migrate(db), []);
-    assert.deepEqual(await appliedVersions(db), [1, 2]);
+    assert.deepEqual(await appliedVersions(db), ALL_VERSIONS);
     assert.equal(await isTable(db, "entities"), false);
     await assertSchemaCurrent(db);
   }));
@@ -439,8 +440,11 @@ test("a release from before versioned migrations cannot start on the upgraded sc
 test("concurrent startups apply each migration exactly once", async () =>
   withDatabase(async (db) => {
     const results = await Promise.all([migrate(db), migrate(db), migrate(db)]);
-    assert.deepEqual(results.flat().sort(), [1, 2]);
-    assert.deepEqual(await appliedVersions(db), [1, 2]);
+    assert.deepEqual(
+      results.flat().sort((a, b) => a - b),
+      ALL_VERSIONS,
+    );
+    assert.deepEqual(await appliedVersions(db), ALL_VERSIONS);
   }));
 
 test("the record registry matches the migrated schema exactly", async () =>
@@ -492,7 +496,7 @@ test("legacy JSON records upgrade into typed tables without losing values", asyn
     await db.query(
       `INSERT INTO lot_allocations(tenant_id,lot_id,collection_id) VALUES('org-a','lot-1','collection-1')`,
     );
-    assert.deepEqual(await migrate(db), [2]);
+    assert.deepEqual(await migrate(db), ALL_VERSIONS.slice(1));
     assert.equal(await isTable(db, "entities"), false);
     for (const legacy of legacyRecords) {
       const [row] = await selectRecords(db, legacy.type, "id=$1", [legacy.id]);
@@ -653,7 +657,8 @@ test("an older release refuses a newer database schema", async () =>
   withDatabase(async (db) => {
     await migrate(db);
     await db.query(
-      `INSERT INTO schema_migrations(version,name,checksum) VALUES(3,'from_the_future','x')`,
+      `INSERT INTO schema_migrations(version,name,checksum) VALUES($1,'from_the_future','x')`,
+      [MIGRATIONS.length + 1],
     );
     await assert.rejects(migrate(db), /newer than this release/);
     await assert.rejects(assertSchemaCurrent(db), /newer than this release/);
@@ -663,7 +668,9 @@ test("verification without migration reports pending work and creates nothing", 
   withDatabase(async (db) => {
     await assert.rejects(
       assertSchemaCurrent(db),
-      /schema is at version 0; this release needs 2/,
+      new RegExp(
+        `schema is at version 0; this release needs ${MIGRATIONS.length}`,
+      ),
     );
     assert.equal(await tableExists(db, "schema_migrations"), false);
     await runMigrations(db, MIGRATIONS.slice(0, 1));

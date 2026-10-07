@@ -122,6 +122,8 @@ test("readiness reports whether the database answers", async () => {
     close: async () => {},
   };
   await withServer(broken, {}, async (url, entries) => {
+    // Liveness must not depend on the database (or on rate-limit counters in it).
+    assert.equal((await fetch(`${url}/api/health`)).status, 200);
     const unavailable = await fetch(`${url}/api/health/ready`);
     assert.equal(unavailable.status, 503);
     assert.deepEqual(await unavailable.json(), {

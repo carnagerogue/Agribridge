@@ -54,6 +54,7 @@ import {
   getChannelReadiness,
 } from "./channels/index.js";
 import { createChannelBridge } from "./channel-bridge.js";
+import { DatabaseRateLimitStore } from "./rate-limit.js";
 import {
   errorFields,
   logPath,
@@ -120,22 +121,8 @@ export function createApp(
     createChannelRouter({ handlers: createChannelBridge(db, env), env }),
   );
   app.use(express.json({ limit: "32kb" }));
-  app.use("/api", originGuard(config));
-  app.use(
-    "/api",
-    rateLimit({
-      windowMs: 60_000,
-      limit: 300,
-      standardHeaders: "draft-8",
-      legacyHeaders: false,
-      message: {
-        error: {
-          code: "RATE_LIMITED",
-          message: "Too many requests. Please wait a minute.",
-        },
-      },
-    }),
-  );
+  // Health checks come before rate limiting, whose counters live in the
+  // database: liveness must not depend on it, and readiness reports it.
   app.get("/api/health", (_req, res) =>
     res.json({
       status: "ok",
@@ -163,6 +150,23 @@ export function createApp(
         .json({ status: "unavailable", checks: { database: "unavailable" } });
     }
   });
+  app.use("/api", originGuard(config));
+  app.use(
+    "/api",
+    rateLimit({
+      windowMs: 60_000,
+      limit: 300,
+      store: new DatabaseRateLimitStore(db, "api"),
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Too many requests. Please wait a minute.",
+        },
+      },
+    }),
+  );
   app.get("/api/lessons", (req: AuthRequest, res, next) => {
     if (
       !(req.headers.cookie || "")
@@ -192,6 +196,7 @@ export function createApp(
   const authLimiter = rateLimit({
     windowMs: 15 * 60_000,
     limit: 20,
+    store: new DatabaseRateLimitStore(db, "auth"),
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
