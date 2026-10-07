@@ -43,7 +43,11 @@ import {
   present,
 } from "./store.js";
 import { countRecords, selectRecords, updateRecord } from "./records.js";
-import { createWeatherService, createWarningsService } from "./weather.js";
+import {
+  createWeatherService,
+  createWarningsService,
+  weatherSetupProblem,
+} from "./weather.js";
 import {
   createChannelRouter,
   sendOutbound,
@@ -604,7 +608,7 @@ export function createApp(
     });
     res.status(result.status).json(result.body);
   });
-  const weather = createWeatherService(env);
+  const weather = createWeatherService(env, fetch, logger);
   const warnings = createWarningsService();
   app.get("/api/weather", async (req, res) => {
     const { latitude, longitude } = z
@@ -848,12 +852,10 @@ export function createApp(
           {
             id: "weather",
             name: "Weather forecast",
-            status:
-              !config.production || env.OPEN_METEO_BASE_URL
-                ? "configured"
-                : "not_configured",
-            detail:
-              "Open-Meteo model forecasts. Production needs a licensed or self-hosted endpoint.",
+            status: weatherSetupProblem(env) ? "not_configured" : "configured",
+            detail: weatherSetupProblem(env)
+              ? `Forecasts are off: ${weatherSetupProblem(env)}. Use a licensed Open-Meteo customer endpoint (with OPEN_METEO_API_KEY) or a self-hosted Open-Meteo server.`
+              : "Open-Meteo model forecasts. Production needs a licensed or self-hosted endpoint.",
           },
           {
             id: "official-warnings",

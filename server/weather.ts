@@ -1,4 +1,5 @@
 import { ApiError } from "./security.js";
+import { silentLogger, type Logger } from "./observability.js";
 type Weather = {
   source: string;
   fetchedAt: string;
@@ -35,13 +36,53 @@ const descriptions: Record<number, string> = {
   96: "Thunderstorm with hail",
   99: "Thunderstorm with hail",
 };
+/** Why a forecast failed, for operators; coordinates are never included. */
+class WeatherFailure extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
+function failureReason(error: unknown) {
+  if (error instanceof WeatherFailure) return error.reason;
+  if (error instanceof DOMException && error.name === "TimeoutError")
+    return "timeout";
+  return error instanceof TypeError ? "network" : "unexpected";
+}
+
+/**
+ * Production must name a licensed or self-hosted endpoint: Open-Meteo's free
+ * public API is for noncommercial use. Returns why the setup is unusable.
+ */
+export function weatherSetupProblem(env: NodeJS.ProcessEnv) {
+  if (env.NODE_ENV !== "production") return undefined;
+  if (!env.OPEN_METEO_BASE_URL) return "OPEN_METEO_BASE_URL is not set";
+  try {
+    if (new URL(env.OPEN_METEO_BASE_URL).protocol !== "https:")
+      return "OPEN_METEO_BASE_URL must use HTTPS";
+  } catch {
+    return "OPEN_METEO_BASE_URL is not a valid URL";
+  }
+  return undefined;
+}
+
 export function createWeatherService(
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: typeof fetch = fetch,
+  logger: Logger = silentLogger,
 ) {
   const cache = new Map<string, { at: number; data: Weather }>();
   const inflight = new Map<string, Promise<Weather>>();
+  const setupProblem = weatherSetupProblem(env);
+  if (setupProblem)
+    logger.warn("weather.not_configured", { problem: setupProblem });
   return async (latitude: number, longitude: number): Promise<Weather> => {
+    // A missing setting is not a connection problem: say so, and never retry.
+    if (setupProblem)
+      throw new ApiError(
+        503,
+        "WEATHER_NOT_CONFIGURED",
+        "Forecasts are not set up for this service yet. An administrator needs to connect a licensed weather source. Official warnings are shown separately.",
+      );
     const lat = Math.round(latitude * 100) / 100;
     const lon = Math.round(longitude * 100) / 100;
     const key = `${lat},${lon}`;
@@ -51,15 +92,9 @@ export function createWeatherService(
     if (inflight.has(key)) return inflight.get(key)!;
     const run = (async () => {
       try {
-        if (env.NODE_ENV === "production" && !env.OPEN_METEO_BASE_URL)
-          throw new Error(
-            "A licensed or self-hosted weather endpoint must be configured for production.",
-          );
         const url = new URL(
           env.OPEN_METEO_BASE_URL || "https://api.open-meteo.com/v1/forecast",
         );
-        if (url.protocol !== "https:" && env.NODE_ENV === "production")
-          throw new Error("Weather API requires HTTPS.");
         for (const [name, value] of Object.entries({
           latitude: String(lat),
           longitude: String(lon),
@@ -76,14 +111,14 @@ export function createWeatherService(
           signal: AbortSignal.timeout(7000),
           headers: { accept: "application/json" },
         });
-        if (!response.ok) throw new Error("Weather provider unavailable");
+        if (!response.ok) throw new WeatherFailure(`http_${response.status}`);
         const raw = (await response.json()) as any;
         if (
           !Number.isFinite(raw.current?.temperature_2m) ||
           !Array.isArray(raw.daily?.time) ||
           raw.daily.time.length < 1
         )
-          throw new Error("Invalid weather data");
+          throw new WeatherFailure("invalid_data");
         const days = raw.daily.time
           .slice(0, 7)
           .map((date: string, index: number) => ({
@@ -102,7 +137,7 @@ export function createWeatherService(
               ),
           )
         )
-          throw new Error("Incomplete weather data");
+          throw new WeatherFailure("incomplete_data");
         const advisories: Weather["advisories"] = [
           {
             severity: "info",
@@ -134,9 +169,14 @@ export function createWeatherService(
         if (cache.size >= 1000) cache.delete(cache.keys().next().value!);
         cache.set(key, { at: Date.now(), data });
         return data;
-      } catch {
-        if (previous && Date.now() - previous.at < 6 * 3600_000)
-          return { ...previous.data, stale: true };
+      } catch (error) {
+        const stale =
+          previous !== undefined && Date.now() - previous.at < 6 * 3600_000;
+        logger.warn("weather.unavailable", {
+          reason: failureReason(error),
+          servedStaleForecast: stale,
+        });
+        if (stale) return { ...previous!.data, stale: true };
         throw new ApiError(
           503,
           "WEATHER_UNAVAILABLE",
