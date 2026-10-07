@@ -1,6 +1,13 @@
 import type { Page } from "@playwright/test";
 import { FORECAST_FIXTURE, MARKET_FIXTURE } from "./external.ts";
-import { expect, openSection, signInAsDemo, test } from "./fixtures.ts";
+import {
+  expect,
+  expectBrowserOffline,
+  openSection,
+  setNetwork,
+  signInAsDemo,
+  test,
+} from "./fixtures.ts";
 
 async function openTasks(page: Page) {
   await openSection(page, "Farms");
@@ -80,7 +87,6 @@ test("a farmer completes today's task and it stays completed", async ({
 
 test("a farmer's offline change waits on the phone and syncs on reconnect", async ({
   page,
-  context,
 }) => {
   await signInAsDemo(page, "farmer");
   await page.goto("/settings");
@@ -96,12 +102,13 @@ test("a farmer's offline change waits on the phone and syncs on reconnect", asyn
     page.getByRole("button", { name: `Complete ${task}` }),
   ).toBeVisible();
 
-  await context.setOffline(true);
+  await setNetwork(page, "offline");
+  await expectBrowserOffline(page);
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await page.getByRole("button", { name: `Complete ${task}` }).click();
   await expect(page.getByText("Awaiting sync")).toBeVisible();
 
-  await context.setOffline(false);
+  await setNetwork(page, "3g");
   await expect(page.getByText("Awaiting sync")).toBeHidden({
     timeout: 30_000,
   });
@@ -116,10 +123,7 @@ test("a farmer's offline change waits on the phone and syncs on reconnect", asyn
   expect(saved).toBe("completed");
 });
 
-test("a saved workspace reopens without a connection", async ({
-  page,
-  context,
-}) => {
+test("a saved workspace reopens without a connection", async ({ page }) => {
   await signInAsDemo(page, "farmer");
   // A full load of Settings: the workspace is still arriving over 3G when
   // the farmer turns on device storage, then the connection drops at once.
@@ -133,8 +137,9 @@ test("a saved workspace reopens without a connection", async ({
   await keep.click();
   await expect(keep).toBeChecked();
 
-  await context.setOffline(true);
+  await setNetwork(page, "offline");
   await page.goto("/farms");
+  await expectBrowserOffline(page);
   await expect(page.getByText("You’re offline.")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Kikandwa maize field" }),
@@ -143,7 +148,7 @@ test("a saved workspace reopens without a connection", async ({
   await expect(
     page.getByRole("button", { name: /Walk the maize field/ }),
   ).toBeVisible();
-  await context.setOffline(false);
+  await setNetwork(page, "3g");
 });
 
 test("device storage stays off until the workspace has loaded", async ({

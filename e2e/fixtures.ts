@@ -1,4 +1,9 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type CDPSession,
+  type Page,
+} from "@playwright/test";
 
 /**
  * A constrained 3G connection and a 4× slower CPU, approximating an entry-level
@@ -11,11 +16,36 @@ export const CONSTRAINED_3G = {
   uploadThroughput: (250 * 1024) / 8,
 };
 
+const sessions = new WeakMap<Page, CDPSession>();
+
 export async function throttle(page: Page) {
   const cdp = await page.context().newCDPSession(page);
+  sessions.set(page, cdp);
   await cdp.send("Network.enable");
   await cdp.send("Network.emulateNetworkConditions", CONSTRAINED_3G);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+}
+
+/**
+ * Drops or restores the connection. The throttling session and Playwright's
+ * offline switch are separate controls, and newer Chromium can let the
+ * throttle's "online" win after a page load, so both are set together.
+ */
+export async function setNetwork(page: Page, state: "offline" | "3g") {
+  const offline = state === "offline";
+  await page.context().setOffline(offline);
+  await sessions
+    .get(page)
+    ?.send("Network.emulateNetworkConditions", { ...CONSTRAINED_3G, offline });
+}
+
+/** Fails clearly if the harness, rather than the app, kept the page online. */
+export async function expectBrowserOffline(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => navigator.onLine), {
+      message: "the browser should report no connection",
+    })
+    .toBe(false);
 }
 
 export const test = base.extend<{ consoleErrors: string[] }>({
