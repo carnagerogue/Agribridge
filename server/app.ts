@@ -41,8 +41,8 @@ import {
   mutate,
   operatorTypes,
   present,
-  type EntityRow,
 } from "./store.js";
+import { countRecords, selectRecords, updateRecord } from "./records.js";
 import { createWeatherService, createWarningsService } from "./weather.js";
 import {
   createChannelRouter,
@@ -475,17 +475,20 @@ export function createApp(
           input.consentSource = "phone_changed";
         }
         input = await prepareWorkflow(tx, user, type, input, old);
-        const { rows } = await tx.query<EntityRow>(
-          `UPDATE entities SET data=data || $4::jsonb,version=version+1,updated_at=now() WHERE id=$1 AND tenant_id=$2 AND version=$3 RETURNING *`,
-          [id, user.organizationId, version, JSON.stringify(input)],
+        const updated = await updateRecord(
+          tx,
+          type,
+          { id, tenantId: user.organizationId },
+          input,
+          { expectedVersion: version },
         );
-        if (!rows[0])
+        if (!updated)
           throw new ApiError(
             409,
             "VERSION_CONFLICT",
             "This record changed on another device. Refresh and review your changes.",
           );
-        const entity: any = present(rows[0]);
+        const entity: any = present(updated);
         if (type === "collections")
           Object.assign(entity, await allocateCollection(tx, user, id, input));
         await audit(tx, user, "record.updated", type, id);
@@ -501,18 +504,23 @@ export function createApp(
     const result = await mutate(db, req, async (tx) => {
       const data = settingsSchema.parse(req.body);
       const user = req.user!;
-      const { rows } = await tx.query<EntityRow>(
-        `SELECT * FROM entities WHERE tenant_id=$1 AND owner_id=$2 AND type='settings'`,
+      const [current] = await selectRecords(
+        tx,
+        "settings",
+        "tenant_id=$1 AND owner_id=$2",
         [user.organizationId, user.id],
+        "FOR UPDATE",
       );
-      let body;
-      if (rows[0]) {
-        const updated = await tx.query<EntityRow>(
-          `UPDATE entities SET data=$2::jsonb,version=version+1,updated_at=now() WHERE id=$1 RETURNING *`,
-          [rows[0].id, JSON.stringify(data)],
-        );
-        body = present(updated.rows[0]);
-      } else body = await insertEntity(tx, user, "settings", data);
+      const body = current
+        ? present(
+            (await updateRecord(
+              tx,
+              "settings",
+              { id: current.id, tenantId: user.organizationId },
+              data,
+            ))!,
+          )
+        : await insertEntity(tx, user, "settings", data);
       await audit(tx, user, "settings.updated", "settings");
       return { status: 200, body };
     });
@@ -543,18 +551,23 @@ export function createApp(
         completed: passed,
         score: passed ? 100 : 0,
       };
-      const { rows } = await tx.query<EntityRow>(
-        `SELECT * FROM entities WHERE tenant_id=$1 AND owner_id=$2 AND type='progress' AND data->>'lessonId'=$3`,
+      const [current] = await selectRecords(
+        tx,
+        "progress",
+        "tenant_id=$1 AND owner_id=$2 AND lesson_id=$3",
         [user.organizationId, user.id, lesson.id],
+        "FOR UPDATE",
       );
-      let body;
-      if (rows[0]) {
-        const updated = await tx.query<EntityRow>(
-          `UPDATE entities SET data=$2::jsonb,version=version+1,updated_at=now() WHERE id=$1 RETURNING *`,
-          [rows[0].id, JSON.stringify(data)],
-        );
-        body = present(updated.rows[0]);
-      } else body = await insertEntity(tx, user, "progress", data);
+      const body = current
+        ? present(
+            (await updateRecord(
+              tx,
+              "progress",
+              { id: current.id, tenantId: user.organizationId },
+              data,
+            ))!,
+          )
+        : await insertEntity(tx, user, "progress", data);
       await audit(tx, user, "lesson.attempted", "progress", lesson.id);
       return {
         status: 200,
@@ -680,12 +693,15 @@ export function createApp(
       return { status: 201, body };
     });
     const id = result.body.id;
-    const { rows } = await db.query<EntityRow>(
-      `UPDATE entities SET data=data || '{"dispatchState":"sending"}'::jsonb WHERE id=$1 AND tenant_id=$2 AND data->>'dispatchState'='reserved' RETURNING *`,
-      [id, req.user!.organizationId],
+    // Only one request may move a reserved message to sending.
+    const message = await updateRecord(
+      db,
+      "messages",
+      { id, tenantId: req.user!.organizationId },
+      { dispatchState: "sending" },
+      { bumpVersion: false, where: { dispatchState: "reserved" } },
     );
-    if (rows[0]) {
-      const message = rows[0];
+    if (message) {
       const contact = await findEntity(
         db,
         req.user!,
@@ -748,9 +764,12 @@ export function createApp(
               [req.user!.organizationId, response.providerId],
             )
           : { rows: [] };
-        const { rows: current } = await tx.query<EntityRow>(
-          `SELECT * FROM entities WHERE id=$1 FOR UPDATE`,
-          [id],
+        const current = await selectRecords(
+          tx,
+          "messages",
+          "tenant_id=$1 AND id=$2",
+          [req.user!.organizationId, id],
+          "FOR UPDATE",
         );
         const rank: Record<string, number> = {
           not_configured: 0,
@@ -768,12 +787,11 @@ export function createApp(
         ]
           .filter(Boolean)
           .sort((a, b) => (rank[b] || 0) - (rank[a] || 0))[0];
-        await tx.query(
-          `UPDATE entities SET data=data || $2::jsonb,version=version+1,updated_at=now() WHERE id=$1`,
-          [
-            id,
-            JSON.stringify({ ...response, status, dispatchState: "finished" }),
-          ],
+        await updateRecord(
+          tx,
+          "messages",
+          { id, tenantId: req.user!.organizationId },
+          { ...response, status, dispatchState: "finished" },
         );
         await audit(tx, req.user!, `message.${status}`, "messages", id);
       });
@@ -786,20 +804,15 @@ export function createApp(
     requireOperator,
     async (req: AuthRequest, res) => {
       const user = req.user!;
-      const [{ rows: counts }, { rows: events }] = await Promise.all([
-        db.query<{ type: string; count: number }>(
-          `SELECT type,count(*)::integer AS count FROM entities WHERE tenant_id=$1 GROUP BY type`,
-          [user.organizationId],
-        ),
+      const [counts, { rows: events }] = await Promise.all([
+        countRecords(db, user.organizationId),
         db.query<any>(
           `SELECT id,action,entity_type AS "entityType",created_at AS "createdAt",actor_name AS "actorName" FROM audit_events WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 50`,
           [user.organizationId],
         ),
       ]);
       res.json({
-        counts: Object.fromEntries(
-          counts.map((item) => [item.type, item.count]),
-        ),
+        counts,
         audit: events,
         integrations: [
           ...getChannelReadiness(env),

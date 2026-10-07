@@ -5,7 +5,7 @@ This repository began with a README only. Build a working, low-bandwidth agricul
 ## Stack and ownership
 
 - Root package: React + TypeScript + Vite web app, Express TypeScript API. Node 22. Frontend served at 5173, API at 3001, Vite proxy `/api`.
-- Backend uses PostgreSQL in production (`DATABASE_URL`) and PGlite on disk locally. Database abstraction uses parameterized SQL. Do not put PGlite in browser bundle.
+- Backend uses PostgreSQL in production (`DATABASE_URL`) and PGlite on disk locally. Database abstraction uses parameterized SQL over one typed table per record type, changed only through numbered migrations in `server/migrations/`. Do not put PGlite in browser bundle.
 - Root agent owns package manifests, frontend, public PWA, design, and integration. Backend agent owns `server/` except `server/channels/`. Channel agent owns `server/channels/` and channel docs/tests. Coordinate contracts via messages.
 - Demo server: `AGRIBRIDGE_DEMO=true`; localhost development only. `POST /api/auth/demo` `{role:'farmer'|'operator'|'admin'}` establishes real HttpOnly session and returns `{user}`. Production refuses demo mode and no demo identity exists unless explicitly enabled. Dedicated demo tenant contains clearly identified sample data. Switching demo role is demo-only.
 

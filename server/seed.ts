@@ -1,5 +1,6 @@
 import type { Database } from "./db.js";
 import { persistWhatsAppInbound } from "./whatsapp.js";
+import { insertRecord } from "./records.js";
 export const DEMO_TENANT = "org-demo-nakaseke";
 export const DEMO_USERS = {
   farmer: "user-demo-grace",
@@ -484,20 +485,21 @@ export async function seedDemo(db: Database) {
       ],
     ];
     for (const [id, type, owner, data] of records)
-      await tx.query(
-        `INSERT INTO entities(id,type,tenant_id,owner_id,data) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT DO NOTHING`,
-        [
+      await insertRecord(
+        tx,
+        type,
+        {
           id,
-          type,
-          DEMO_TENANT,
-          owner,
-          JSON.stringify({ ...data, sample: true }),
-        ],
+          tenantId: DEMO_TENANT,
+          ownerId: owner,
+          data: { ...data, sample: true },
+        },
+        { ignoreConflict: true },
       );
     // Only establish the initial sample allocation while the original record is
     // unchanged. A later restart must never re-pledge a user-cancelled collection.
     await tx.query(
-      `INSERT INTO lot_allocations(tenant_id,lot_id,collection_id) SELECT $1,'lot-grace-sample','collection-sample' FROM entities WHERE id='collection-sample' AND version=1 AND data->>'status'='planning' ON CONFLICT DO NOTHING`,
+      `INSERT INTO lot_allocations(tenant_id,lot_id,collection_id) SELECT $1,'lot-grace-sample','collection-sample' FROM collections WHERE tenant_id=$1 AND id='collection-sample' AND version=1 AND status='planning' ON CONFLICT DO NOTHING`,
       [DEMO_TENANT],
     );
     for (const [id, body, contentType] of [

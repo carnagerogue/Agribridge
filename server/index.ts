@@ -2,14 +2,15 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import express from "express";
 import { loadConfig } from "./config.js";
-import { openDatabase, migrate } from "./db.js";
+import { openDatabase, migrate, assertSchemaCurrent } from "./db.js";
 import { seedDemo } from "./seed.js";
 import { createApp } from "./app.js";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 const config = loadConfig();
 const db = await openDatabase(config);
-await migrate(db);
+if (config.databaseMigrations === "auto") await migrate(db, console.log);
+else await assertSchemaCurrent(db);
 if (config.demo) await seedDemo(db);
 const app = createApp(db, config);
 const dist = path.resolve("dist");

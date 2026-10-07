@@ -16,11 +16,13 @@
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist-server/index.js",
     "admin:create:production": "node dist-server/bootstrap-admin.js",
+    "db:migrate:production": "node dist-server/migrate.js",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run && npm run test:server",
     "test:server": "tsx --test server/tests/*.test.ts server/channels/*.test.ts server/ai/*.test.ts",
-    "admin:create": "tsx server/bootstrap-admin.ts"
+    "admin:create": "tsx server/bootstrap-admin.ts",
+    "db:migrate": "tsx server/migrate.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",
