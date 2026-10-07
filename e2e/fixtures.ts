@@ -34,11 +34,68 @@ export const test = base.extend<{ consoleErrors: string[] }>({
     });
     await use(errors);
   },
-  page: async ({ page }, use) => {
+  page: async ({ page }, use, testInfo) => {
+    const activity: string[] = [];
+    const record = (entry: string) =>
+      activity.push(entry) > 30 && activity.shift();
+    const path = (url: string) => new URL(url).pathname;
+    page.on("console", (message) =>
+      record(`console.${message.type()}: ${message.text().slice(0, 160)}`),
+    );
+    page.on("requestfinished", async (request) =>
+      record(
+        `${request.method()} ${path(request.url())} → ${(await request.response())?.status()}${request.serviceWorker() ? " (service worker)" : ""}`,
+      ),
+    );
+    page.on("requestfailed", (request) =>
+      record(
+        `${request.method()} ${path(request.url())} ✗ ${request.failure()?.errorText}`,
+      ),
+    );
     await throttle(page);
     await use(page);
+    // CI keeps no traces, so describe the page state when a journey fails.
+    if (testInfo.status !== testInfo.expectedStatus && !page.isClosed())
+      console.log(
+        `Failure context for "${testInfo.title}":\n` +
+          JSON.stringify(await describe(page).catch(String), null, 2) +
+          `\nRecent activity:\n  ${activity.join("\n  ")}`,
+      );
   },
 });
+
+async function describe(page: Page) {
+  return page.evaluate(async () => {
+    const snapshots = await new Promise<unknown>((resolve) => {
+      const open = indexedDB.open("agribridge-offline");
+      open.onerror = () => resolve("unavailable");
+      open.onsuccess = () => {
+        if (!open.result.objectStoreNames.contains("snapshots"))
+          return resolve("none");
+        const all = open.result
+          .transaction("snapshots")
+          .objectStore("snapshots")
+          .getAll();
+        all.onsuccess = () =>
+          resolve(
+            all.result.map((row: any) => ({
+              savedAt: row.savedAt,
+              farms: row.data?.farms?.length,
+              tasks: row.data?.tasks?.length,
+            })),
+          );
+      };
+    });
+    return {
+      url: location.pathname,
+      navigatorOnline: navigator.onLine,
+      serviceWorkerControlled: !!navigator.serviceWorker?.controller,
+      storageKeys: Object.keys(localStorage),
+      snapshots,
+      text: document.body.innerText.replace(/\s+/g, " ").slice(0, 600),
+    };
+  });
+}
 export { expect };
 
 export async function signInAsDemo(page: Page, role: "farmer" | "operator") {
