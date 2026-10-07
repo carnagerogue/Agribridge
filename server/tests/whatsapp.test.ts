@@ -242,10 +242,9 @@ test("verified incoming text persists exactly once, stays private, and does not 
     [first.eventId],
   );
   assert.equal(count.rows[0].count, 1);
-  const contacts = await db.query(
-    `SELECT id FROM entities WHERE type='contacts' AND data->>'phone'=$1`,
-    [phone],
-  );
+  const contacts = await db.query(`SELECT id FROM contacts WHERE phone=$1`, [
+    phone,
+  ]);
   assert.equal(contacts.rows.length, 0);
   const bootstrap = JSON.stringify(
     (await call("/api/bootstrap", operator)).body,
@@ -376,10 +375,10 @@ test("STOP is monotonic; START is not support or marketing consent; newer direct
   });
   assert.equal((await item(id)).canReply, true);
   const contact = await db.query<any>(
-    `SELECT data FROM entities WHERE id='contact-grace'`,
+    `SELECT consent,consent_channels FROM contacts WHERE id='contact-grace'`,
   );
-  assert.equal(contact.rows[0].data.consent, false);
-  assert.deepEqual(contact.rows[0].data.consentChannels, []);
+  assert.equal(contact.rows[0].consent, false);
+  assert.deepEqual(contact.rows[0].consent_channels, []);
 });
 
 test("expired windows and demo fixtures cannot send; long text is marked and media is never downloaded", async () => {
@@ -625,7 +624,7 @@ test("legacy outbound messaging cannot use another tenant business account; CRM 
   assert.equal(result.status, 403);
   assert.equal(result.body.error.code, "CHANNEL_SCOPE_FORBIDDEN");
   const { rows } = await db.query<any>(
-    `SELECT version FROM entities WHERE id='contact-grace'`,
+    `SELECT version FROM contacts WHERE id='contact-grace'`,
   );
   const version = rows[0].version;
   assert.equal(

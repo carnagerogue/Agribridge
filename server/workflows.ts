@@ -3,6 +3,7 @@ import type { Queryable } from "./db.js";
 import { ApiError, type User } from "./security.js";
 import { schemas, type EntityType } from "./schemas.js";
 import { findEntity, type EntityRow } from "./store.js";
+import { selectRecords, updateRecord } from "./records.js";
 
 type RecordData = Record<string, any>;
 const invalid = (message: string) =>
@@ -123,7 +124,7 @@ export async function prepareWorkflow(
       );
     if (old) {
       const linked = await db.query<{ total: number; count: number }>(
-        `SELECT COALESCE(sum((data->>'quantityKg')::numeric),0)::float AS total,count(*)::integer AS count FROM entities WHERE tenant_id=$1 AND type='lots' AND data->>'seasonId'=$2`,
+        `SELECT COALESCE(sum(quantity_kg),0)::float AS total,count(*)::integer AS count FROM lots WHERE tenant_id=$1 AND season_id=$2`,
         [user.organizationId, old.id],
       );
       if (data.harvestedKg + 0.000001 < linked.rows[0].total)
@@ -151,7 +152,7 @@ export async function prepareWorkflow(
       if (!equalCrop(data.crop, season.data.crop))
         throw invalid("The crop must match the linked season.");
       const linked = await db.query<{ total: number }>(
-        `SELECT COALESCE(sum((data->>'quantityKg')::numeric),0)::float AS total FROM entities WHERE tenant_id=$1 AND type='lots' AND data->>'seasonId'=$2 AND id<>$3`,
+        `SELECT COALESCE(sum(quantity_kg),0)::float AS total FROM lots WHERE tenant_id=$1 AND season_id=$2 AND id<>$3`,
         [user.organizationId, data.seasonId, old?.id || ""],
       );
       if (
@@ -379,9 +380,13 @@ export async function allocateCollection(
     qualityStatus: lot.data.qualityStatus,
     lotVersion: lot.version,
   }));
-  await db.query(
-    `UPDATE entities SET data=data || $2::jsonb WHERE id=$1 AND tenant_id=$3`,
-    [id, JSON.stringify({ manifest }), user.organizationId],
+  // The manifest is derived from the allocation, not a user edit.
+  await updateRecord(
+    db,
+    "collections",
+    { id, tenantId: user.organizationId },
+    { manifest },
+    { bumpVersion: false },
   );
   return { manifest };
 }
@@ -403,7 +408,7 @@ export async function decorateWorkflow(
       collection_id: string;
       status: string;
     }>(
-      `SELECT a.lot_id,a.collection_id,c.data->>'status' AS status FROM lot_allocations a JOIN entities c ON c.id=a.collection_id WHERE a.tenant_id=$1`,
+      `SELECT a.lot_id,a.collection_id,c.status FROM lot_allocations a JOIN collections c ON c.tenant_id=a.tenant_id AND c.id=a.collection_id WHERE a.tenant_id=$1`,
       [user.organizationId],
     );
     const byLot = new Map(
@@ -419,9 +424,14 @@ export async function decorateWorkflow(
   }
   if (type === "collections") {
     if (user.role === "farmer") return [];
-    const { rows } = await db.query<EntityRow>(
-      `SELECT * FROM entities WHERE tenant_id=$1 AND type='lots'`,
-      [user.organizationId],
+    const rows = await selectRecords(
+      db,
+      "lots",
+      "tenant_id=$1 AND id=ANY($2::text[])",
+      [
+        user.organizationId,
+        [...new Set(entities.flatMap((entity) => entity.lotIds))],
+      ],
     );
     const byId = new Map(rows.map((row) => [row.id, row]));
     return entities.map((entity) => {

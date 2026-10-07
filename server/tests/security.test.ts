@@ -434,14 +434,14 @@ test("verified callbacks persist dedupe and STOP withdrawal atomically", async (
   };
   await bridge.handleInbound(event);
   const first = await db.query<any>(
-    `SELECT version,data FROM entities WHERE id='contact-grace'`,
+    `SELECT version,consent FROM contacts WHERE id='contact-grace'`,
   );
   await bridge.handleInbound(event);
   const second = await db.query<any>(
-    `SELECT version,data FROM entities WHERE id='contact-grace'`,
+    `SELECT version,consent FROM contacts WHERE id='contact-grace'`,
   );
   assert.equal(second.rows[0].version, first.rows[0].version);
-  assert.equal(second.rows[0].data.consent, false);
+  assert.equal(second.rows[0].consent, false);
   const request = {
     eventId: "ussd-test-1",
     sessionId: "session-test",

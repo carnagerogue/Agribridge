@@ -64,7 +64,7 @@ type Context = {
   demoLogin: (role: Role) => Promise<void>;
   logout: () => Promise<void>;
   lockWorkspace: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<Bootstrap | undefined>;
   mutate: <T>(
     path: string,
     method: string,
@@ -316,12 +316,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
   const dataRef = useRef(data);
   dataRef.current = data;
+  // True once this session has loaded the workspace from the server. A device
+  // copy must never be saved from the empty state shown while it loads.
+  const loadedRef = useRef(false);
   const generation = useRef(0);
   const notify = useCallback((message: string) => setToast(message), []);
   const clearInterface = useCallback(() => {
     generation.current += 1;
     userRef.current = null;
     dataRef.current = empty;
+    loadedRef.current = false;
     setCsrfToken("");
     setUser(null);
     setData(empty);
@@ -413,10 +417,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCsrfToken(session.csrfToken);
       setUser(session.user);
       setData(empty);
+      loadedRef.current = false;
       setQueue([]);
       setError("");
       setLastSync("");
-      setOnline(true);
+      setOnline(navigator.onLine);
       const scope = scopeOf(session.user);
       const enabled =
         hasOfflineConsent(scope) && !session.user.passwordChangeRequired;
@@ -466,9 +471,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!isCurrent(current, revision)) return;
       const complete = { ...empty, ...next };
       setData(complete);
+      loadedRef.current = true;
       setError("");
       setLastSync(new Date().toISOString());
-      setOnline(true);
+      // A response that was already in flight must not hide a connection the
+      // browser has since lost; the "online" event restores the state.
+      setOnline(navigator.onLine);
       const scope = scopeOf(current);
       if (hasOfflineConsent(scope)) {
         try {
@@ -486,6 +494,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             );
         }
       }
+      return complete;
     } catch (failure) {
       if (!isCurrent(current, revision)) return;
       if (failure instanceof ApiError && failure.status === 401) {
@@ -525,7 +534,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (failure) {
         if (!active || locallySignedOut()) return;
         if (failure instanceof ApiError && failure.status < 500) {
-          setOnline(true);
+          setOnline(navigator.onLine);
           if (failure.status === 401 && rememberedUser()) lockAfterRejection();
           return;
         }
@@ -578,7 +587,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .then((health) => {
           if (active && !locallySignedOut()) {
             setDemo(health.mode === "demo");
-            setOnline(true);
+            setOnline(navigator.onLine);
           }
         })
         .catch(() => {})
@@ -728,7 +737,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!isCurrent(current, revision)) return;
       setQueue(await getQueue(scope));
       if (result.sent) await refresh().catch(() => {});
-      else setOnline(!connectionLost && result.status !== "offline");
+      else
+        setOnline(
+          navigator.onLine && !connectionLost && result.status !== "offline",
+        );
       if (result.status === "conflict")
         notify(
           "A record changed elsewhere. Review the conflict in Connection & settings.",
@@ -858,7 +870,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         "Sync or discard pending changes before clearing offline storage.",
       );
     if (enabled) {
-      await saveSnapshot(scope, safeData(dataRef.current, current));
+      let workspace = dataRef.current;
+      if (!loadedRef.current) {
+        // Still loading, or showing an earlier device copy: fetch first.
+        const loaded = await refresh().catch(() => undefined);
+        if (!isCurrent(current, revision)) return;
+        if (!loaded)
+          throw new Error(
+            "Connect to load your workspace before saving it on this device.",
+          );
+        workspace = loaded;
+      }
+      await saveSnapshot(scope, safeData(workspace, current));
       if (!isCurrent(current, revision)) {
         await clearScope(scope);
         return;

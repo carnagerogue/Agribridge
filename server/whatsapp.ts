@@ -155,7 +155,7 @@ export async function persistWhatsAppInbound(
             .trim()
             .slice(0, 1600);
   const contact = await db.query<{ id: string }>(
-    `SELECT id FROM entities WHERE tenant_id=$1 AND type='contacts' AND data->>'phone'=$2 ORDER BY created_at,id LIMIT 1`,
+    `SELECT id FROM contacts WHERE tenant_id=$1 AND phone=$2 ORDER BY created_at,id LIMIT 1`,
     [tenant, event.from],
   );
   const id = options.id || randomUUID();
@@ -257,7 +257,7 @@ function presentReply(row: ReplyRow, now = Date.now()) {
     sample: row.sample,
   };
 }
-const inboxSelect = `SELECT i.*,t.last_request_at,t.last_stop_at,c.data->>'name' AS contact_name,EXISTS(SELECT 1 FROM whatsapp_replies r JOIN whatsapp_inbox p ON p.id=r.inbox_id AND p.tenant_id=r.tenant_id WHERE p.tenant_id=i.tenant_id AND p.from_number=i.from_number AND (r.delivery_uncertain=true OR r.status='queued')) AS pending_reply FROM whatsapp_inbox i LEFT JOIN whatsapp_threads t ON t.tenant_id=i.tenant_id AND t.from_number=i.from_number LEFT JOIN entities c ON c.id=i.contact_id AND c.tenant_id=i.tenant_id AND c.type='contacts' AND c.data->>'phone'=i.from_number`;
+const inboxSelect = `SELECT i.*,t.last_request_at,t.last_stop_at,c.name AS contact_name,EXISTS(SELECT 1 FROM whatsapp_replies r JOIN whatsapp_inbox p ON p.id=r.inbox_id AND p.tenant_id=r.tenant_id WHERE p.tenant_id=i.tenant_id AND p.from_number=i.from_number AND (r.delivery_uncertain=true OR r.status='queued')) AS pending_reply FROM whatsapp_inbox i LEFT JOIN whatsapp_threads t ON t.tenant_id=i.tenant_id AND t.from_number=i.from_number LEFT JOIN contacts c ON c.id=i.contact_id AND c.tenant_id=i.tenant_id AND c.phone=i.from_number`;
 async function getInbox(
   db: Queryable,
   tenant: string,

@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+import { brotliCompress, constants, gzip } from "node:zlib";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -48,8 +51,49 @@ function offlineShell(): Plugin {
   };
 }
 
+/**
+ * Writes Brotli and gzip copies of text assets after the build so the server
+ * sends compressed files without spending CPU per request (server/web.ts).
+ */
+function precompress(): Plugin {
+  let outDir = "";
+  const brotli = promisify(brotliCompress);
+  const deflate = promisify(gzip);
+  async function files(directory: string): Promise<string[]> {
+    const entries = await readdir(directory, { withFileTypes: true });
+    const nested = await Promise.all(
+      entries.map((entry) => {
+        const path = join(directory, entry.name);
+        return entry.isDirectory() ? files(path) : [path];
+      }),
+    );
+    return nested.flat();
+  }
+  return {
+    name: "agribridge-precompress",
+    apply: "build",
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      for (const file of await files(outDir)) {
+        if (!/\.(?:js|css|html|svg|json|webmanifest)$/.test(file)) continue;
+        if ((await stat(file)).size < 1024) continue;
+        const source = await readFile(file);
+        await writeFile(
+          `${file}.br`,
+          await brotli(source, {
+            params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
+          }),
+        );
+        await writeFile(`${file}.gz`, await deflate(source, { level: 9 }));
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), offlineShell()],
+  plugins: [react(), offlineShell(), precompress()],
   server: {
     port: 5180,
     strictPort: true,

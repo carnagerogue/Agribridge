@@ -3,16 +3,8 @@ import { promisify } from "node:util";
 import type { Database, Queryable } from "./db.js";
 import type { AuthRequest, User } from "./security.js";
 import { ApiError, sha256 } from "./security.js";
-export type EntityRow = {
-  id: string;
-  type: string;
-  tenant_id: string;
-  owner_id: string;
-  data: Record<string, any>;
-  version: number;
-  created_at: Date | string;
-  updated_at: Date | string;
-};
+import { insertRecord, selectRecords, type EntityRow } from "./records.js";
+export type { EntityRow };
 export function present(row: EntityRow) {
   return {
     ...row.data,
@@ -67,9 +59,12 @@ export async function listEntities(db: Queryable, user: User, type: string) {
   const own =
     (user.role === "farmer" && ownTypes.has(type)) ||
     ["progress", "settings"].includes(type);
-  const { rows } = await db.query<EntityRow>(
-    `SELECT * FROM entities WHERE tenant_id=$1 AND type=$2${own ? " AND owner_id=$3" : ""} ORDER BY created_at DESC,id ASC LIMIT 1000`,
-    own ? [user.organizationId, type, user.id] : [user.organizationId, type],
+  const rows = await selectRecords(
+    db,
+    type,
+    own ? "tenant_id=$1 AND owner_id=$2" : "tenant_id=$1",
+    own ? [user.organizationId, user.id] : [user.organizationId],
+    "ORDER BY created_at DESC,id ASC LIMIT 1000",
   );
   return rows.map(present);
 }
@@ -80,11 +75,13 @@ export async function findEntity(
   id: string,
   lock = false,
 ) {
-  const { rows } = await db.query<EntityRow>(
-    `SELECT * FROM entities WHERE tenant_id=$1 AND type=$2 AND id=$3${lock ? " FOR UPDATE" : ""}`,
-    [user.organizationId, type, id],
+  const [row] = await selectRecords(
+    db,
+    type,
+    "tenant_id=$1 AND id=$2",
+    [user.organizationId, id],
+    lock ? "FOR UPDATE" : "",
   );
-  const row = rows[0];
   if (
     !row ||
     (user.role === "farmer" &&
@@ -101,12 +98,12 @@ export async function insertEntity(
   data: Record<string, unknown>,
   ownerId = user.id,
 ) {
-  const id = randomUUID();
-  const { rows } = await db.query<EntityRow>(
-    `INSERT INTO entities(id,type,tenant_id,owner_id,data) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING *`,
-    [id, type, user.organizationId, ownerId, JSON.stringify(data)],
-  );
-  return present(rows[0]);
+  const row = await insertRecord(db, type, {
+    tenantId: user.organizationId,
+    ownerId,
+    data,
+  });
+  return present(row!);
 }
 type MutationResult = { status: number; body: any };
 const slowFingerprint = promisify(scryptCallback);

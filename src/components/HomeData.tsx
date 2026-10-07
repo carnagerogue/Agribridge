@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CloudSun } from "lucide-react";
 import { useApp } from "../context/AppContext";
-import { request } from "../lib/api";
+import { ApiError, request } from "../lib/api";
 import { dateTime, districts } from "../lib/format";
 import { forecastPreview } from "../lib/forecast-preview";
 import type { Forecast } from "../types";
@@ -13,7 +13,7 @@ export function HomeWeather({ district }: { district?: string }) {
   const [state, setState] = useState<{
     district: string;
     forecast?: Forecast;
-    error?: boolean;
+    error?: "unavailable" | "not_configured";
   } | null>(null);
   const [clock, setClock] = useState(() => new Date());
   useEffect(() => {
@@ -30,8 +30,16 @@ export function HomeWeather({ district }: { district?: string }) {
           setState({ district: location.name, forecast });
         }
       },
-      () => {
-        if (active) setState({ district: location.name, error: true });
+      (failure) => {
+        if (active)
+          setState({
+            district: location.name,
+            error:
+              failure instanceof ApiError &&
+              failure.code === "WEATHER_NOT_CONFIGURED"
+                ? "not_configured"
+                : "unavailable",
+          });
       },
     );
     const interval = window.setInterval(() => setClock(new Date()), 60_000);
@@ -70,9 +78,11 @@ export function HomeWeather({ district }: { district?: string }) {
                 ? "Reconnect to check your district forecast."
                 : !location
                   ? "Choose a district to see its forecast."
-                  : current?.error
-                    ? "Forecast unavailable. Open weather to try again."
-                    : "Checking your district forecast…"}
+                  : current?.error === "not_configured"
+                    ? "Forecasts are not set up for this service yet."
+                    : current?.error
+                      ? "Forecast unavailable. Open weather to try again."
+                      : "Checking your district forecast…"}
             </p>
           )}
         </div>

@@ -8,6 +8,8 @@ export type AppConfig = {
   publicOrigin: string;
   databaseTls: boolean;
   databaseCa?: string;
+  /** `auto` applies pending migrations at startup; `verify` only checks them. */
+  databaseMigrations: "auto" | "verify";
   cookieName: string;
   sessionHours: number;
 };
@@ -44,6 +46,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error(
       "PUBLIC_ORIGIN must be an exact origin without a trailing slash.",
     );
+  const databaseMigrations = env.DATABASE_MIGRATIONS || "auto";
+  if (databaseMigrations !== "auto" && databaseMigrations !== "verify")
+    throw new Error('DATABASE_MIGRATIONS must be "auto" or "verify".');
   const port = Number(env.PORT || 3001);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("Invalid PORT.");
@@ -57,6 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     publicOrigin,
     databaseTls: production || env.DATABASE_TLS === "true",
     databaseCa: env.DATABASE_CA_CERT,
+    databaseMigrations,
     cookieName: production ? "__Host-agribridge" : "agribridge_session",
     sessionHours: 12,
   };

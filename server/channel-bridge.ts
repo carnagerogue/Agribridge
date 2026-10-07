@@ -7,7 +7,8 @@ import {
   type ChannelHandlers,
 } from "./channels/index.js";
 import { ApiError, type User } from "./security.js";
-import { audit, insertEntity, type EntityRow } from "./store.js";
+import { audit, insertEntity } from "./store.js";
+import { selectRecords, updateRecord } from "./records.js";
 import { createWeatherService } from "./weather.js";
 import {
   persistWhatsAppInbound,
@@ -65,11 +66,14 @@ export function createChannelBridge(
     });
   }
   async function contact(tx: Queryable, tenant: string, phone: string) {
-    const { rows } = await tx.query<EntityRow>(
-      `SELECT * FROM entities WHERE tenant_id=$1 AND type='contacts' AND data->>'phone'=$2 ORDER BY created_at LIMIT 1 FOR UPDATE`,
+    const [row] = await selectRecords(
+      tx,
+      "contacts",
+      "tenant_id=$1 AND phone=$2",
       [tenant, phone],
+      "ORDER BY created_at,id LIMIT 1 FOR UPDATE",
     );
-    return rows[0];
+    return row;
   }
   async function optOut(
     tx: Queryable,
@@ -78,18 +82,10 @@ export function createChannelBridge(
     occurredAt = new Date().toISOString(),
   ) {
     await stopWhatsAppSupport(tx, tenant, phone, occurredAt);
+    // A delayed STOP must not override permission recorded after it.
     await tx.query(
-      `UPDATE entities SET data=data || $3::jsonb,version=version+1,updated_at=now() WHERE tenant_id=$1 AND type='contacts' AND data->>'phone'=$2 AND COALESCE((data->>'consentRecordedAt')::timestamptz,'epoch')<=$4::timestamptz AND COALESCE((data->>'consentWithdrawnAt')::timestamptz,'epoch')<=$4::timestamptz`,
-      [
-        tenant,
-        phone,
-        JSON.stringify({
-          consent: false,
-          consentChannels: [],
-          consentWithdrawnAt: occurredAt,
-        }),
-        occurredAt,
-      ],
+      `UPDATE contacts SET consent=false,consent_channels='{}',consent_withdrawn_at=$3::timestamptz,version=version+1,updated_at=now() WHERE tenant_id=$1 AND phone=$2 AND COALESCE(consent_recorded_at,'epoch')<=$3::timestamptz AND COALESCE(consent_withdrawn_at,'epoch')<=$3::timestamptz`,
+      [tenant, phone, occurredAt],
     );
     await audit(tx, actor(tenant), "consent.withdrawn", "contacts");
     return true;
@@ -140,17 +136,16 @@ export function createChannelBridge(
             previous && Date.parse(previous) > Date.parse(event.occurredAt)
               ? previous
               : event.occurredAt;
-          await tx.query(
-            `UPDATE entities SET data=data || $2::jsonb,version=version+1,updated_at=now() WHERE id=$1`,
-            [
-              row.id,
-              JSON.stringify({
-                lastInboundAt: {
-                  ...row.data.lastInboundAt,
-                  [event.channel]: latest,
-                },
-              }),
-            ],
+          await updateRecord(
+            tx,
+            "contacts",
+            { id: row.id, tenantId: tenant },
+            {
+              lastInboundAt: {
+                ...row.data.lastInboundAt,
+                [event.channel]: latest,
+              },
+            },
           );
         }
         await supportTask(
@@ -178,9 +173,12 @@ export function createChannelBridge(
           [tenant, event.providerId, event.status, event.occurredAt],
         );
         await applyWhatsAppDelivery(tx, tenant, event);
-        const { rows } = await tx.query<EntityRow>(
-          `SELECT * FROM entities WHERE tenant_id=$1 AND type='messages' AND data->>'providerId'=$2 FOR UPDATE`,
+        const rows = await selectRecords(
+          tx,
+          "messages",
+          "tenant_id=$1 AND provider_id=$2",
           [tenant, event.providerId],
+          "FOR UPDATE",
         );
         for (const row of rows) {
           const old = row.data.status;
@@ -191,15 +189,11 @@ export function createChannelBridge(
             delivered: 3,
           };
           if ((rank[event.status] ?? 0) <= (rank[old] ?? -1)) continue;
-          await tx.query(
-            `UPDATE entities SET data=data || $2::jsonb,version=version+1,updated_at=now() WHERE id=$1`,
-            [
-              row.id,
-              JSON.stringify({
-                status: event.status,
-                deliveryUpdatedAt: event.occurredAt,
-              }),
-            ],
+          await updateRecord(
+            tx,
+            "messages",
+            { id: row.id, tenantId: tenant },
+            { status: event.status, deliveryUpdatedAt: event.occurredAt },
           );
           await audit(
             tx,
@@ -246,11 +240,13 @@ export function createChannelBridge(
         resolveUssd(request.text, {
           weather: async () => forecastText,
           market: async (district) => {
-            const { rows } = await tx.query<EntityRow>(
-              `SELECT * FROM entities WHERE tenant_id=$1 AND type='market-prices' AND data->>'district'=$2 AND data->>'status'='verified' AND (data->>'observedAt')::timestamptz > now()-interval '7 days' ORDER BY updated_at DESC LIMIT 1`,
+            const [row] = await selectRecords(
+              tx,
+              "market-prices",
+              "tenant_id=$1 AND district=$2 AND status='verified' AND observed_at > now()-interval '7 days'",
               [tenant, district],
+              "ORDER BY updated_at DESC LIMIT 1",
             );
-            const row = rows[0];
             return row
               ? `${row.data.crop}: UGX ${row.data.priceUgx}/kg, ${row.data.market}, ${String(row.data.observedAt).slice(0, 10)}. Source: ${row.data.source}.`
               : undefined;
