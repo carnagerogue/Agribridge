@@ -51,6 +51,14 @@ import {
 } from "./channels/index.js";
 import { createChannelBridge } from "./channel-bridge.js";
 import {
+  errorFields,
+  logPath,
+  requestId,
+  requestLogging,
+  silentLogger,
+  type Logger,
+} from "./observability.js";
+import {
   answerQuestion,
   AssistantError,
   getAssistantLimits,
@@ -73,14 +81,17 @@ export function createApp(
   dependencies: {
     whatsappFetch?: typeof fetch;
     marketFetch?: typeof fetch;
+    logger?: Logger;
   } = {},
 ) {
   const app = express();
+  const logger = dependencies.logger ?? silentLogger;
   const marketData = createMarketDataService(db, {
     fetchImpl: dependencies.marketFetch,
   });
   app.disable("x-powered-by");
   if (env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+  app.use(requestLogging(logger, env.TRUST_PROXY === "1"));
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -131,6 +142,23 @@ export function createApp(
           : "development",
     }),
   );
+  // Readiness for load balancers: the process is up and the database answers.
+  app.get("/api/health/ready", async (_req, res) => {
+    try {
+      await Promise.race([
+        db.query("SELECT 1"),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Database timeout")), 2000).unref(),
+        ),
+      ]);
+      res.json({ status: "ready" });
+    } catch (error) {
+      logger.error("health.database_unavailable", errorFields(error));
+      res
+        .status(503)
+        .json({ status: "unavailable", checks: { database: "unavailable" } });
+    }
+  });
   app.get("/api/lessons", (req: AuthRequest, res, next) => {
     if (
       !(req.headers.cookie || "")
@@ -1008,7 +1036,7 @@ export function createApp(
       .status(404)
       .json({ error: { code: "NOT_FOUND", message: "API route not found." } }),
   );
-  app.use((error: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((error: any, req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof z.ZodError) {
       res.status(400).json({
         error: {
@@ -1053,11 +1081,17 @@ export function createApp(
       });
       return;
     }
-    console.error("API request failed:", error.code || error.name || "unknown");
+    logger.error("http.unhandled_error", {
+      requestId: requestId(res),
+      method: req.method,
+      path: logPath(req.originalUrl),
+      ...errorFields(error),
+    });
     res.status(500).json({
       error: {
         code: "INTERNAL_ERROR",
         message: "The request could not be completed. Please try again.",
+        requestId: requestId(res),
       },
     });
   });

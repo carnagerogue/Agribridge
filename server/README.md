@@ -106,6 +106,14 @@ Lots have generated traceability codes, optional season linkage, recorded measur
 
 Demo seed additions are idempotent and clearly sample. They do not overwrite existing records, reverse a cancelled collection or imply real laboratory inspection. See [the research, assumptions and limits](../docs/uganda-value-workflows.md). Database contention behavior must also be tested on the selected managed PostgreSQL deployment; local PGlite serializes transactions.
 
+## Operational logging and health
+
+The server writes one JSON line per API request (`time`, `level`, `event`, `requestId`, `method`, `path`, `status`, `durationMs`) to standard output, and server errors to standard error. Paths have record identifiers masked and query strings removed, because weather requests carry coordinates. Logs never include request or response bodies, cookies, phone numbers, AI text or error messages; an unexpected error records only its class, code and stack frames.
+
+Every response carries an `X-Request-Id`, and a `500` response includes the same `requestId` in its body so support staff can find the matching log entry. An inbound `X-Request-Id` is reused only with `TRUST_PROXY=1`, so the ingress can correlate its own logs.
+
+`GET /api/health` reports that the process is running. `GET /api/health/ready` also checks that the database answers within two seconds and returns `503` otherwise; point load-balancer readiness checks at it.
+
 ## Production setup and release limits
 
 The server refuses production startup with demo enabled, without a PostgreSQL `DATABASE_URL`, or without HTTPS `PUBLIC_ORIGIN`. Production database connections always require TLS with certificate verification; a URL that explicitly disables verification is rejected. Set `DATABASE_CA_CERT` to the provider's PEM certificate if its CA is not in the system trust store. `DATABASE_TLS=true` enables the same transport in development. Set `HOST` for the hosting environment; use `TRUST_PROXY=1` only behind one trusted reverse proxy. Configure encrypted storage, restricted network access and a minimally privileged runtime database user. Run `npm run db:migrate:production` as a controlled deployment step with schema-change credentials, then start replicas with `DATABASE_MIGRATIONS=verify`.
