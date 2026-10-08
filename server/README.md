@@ -16,6 +16,12 @@ Administrators can list and create tenant members at `/api/admin/users`. An emai
 
 `POST /api/auth/login` accepts `{email: "email-or-phone", password}`. `POST /api/auth/password` accepts `{currentPassword,newPassword}`, revokes every existing session, and returns a new `{user,csrfToken}` session. Administrators can suspend or reactivate another tenant member using `PATCH /api/admin/users/:id` with `{active}`; suspension immediately revokes all of that member's sessions. Self-suspension is blocked. Password recovery, administrator MFA and external identity federation still need operational integration before a broad production launch.
 
+### Password recovery
+
+With SMS configured (outside demo mode), `POST /api/auth/recovery/request` `{phone}` returns the same `202` response whether or not an account uses the number, then sends a 6-digit code in the background. A number receives at most three codes an hour, and every send counts against the messaging caps. `POST /api/auth/recovery/confirm` `{phone, code, newPassword}` accepts the newest code only, within ten minutes and five attempts. It sets the password, ends every session for the account and returns a new session. For an account with two-factor sign-in it returns `{mfaRequired, challenge}` instead, so a reset never replaces the second factor. Codes are stored as hashes and the message text is never stored. Without SMS, both endpoints return `503 RECOVERY_UNAVAILABLE`.
+
+For accounts without a mobile number, or when SMS is unavailable, an administrator can set a temporary password for another member with `POST /api/admin/users/:id/password` `{password}`. That ends the member's sessions and requires a new password at their next sign-in.
+
 ### Administrator two-factor sign-in
 
 Administrators must use a time-based one-time code (RFC 6238; any standard authenticator app) whenever `MFA_ENCRYPTION_KEY` is set, which production requires. Demo mode is exempt. An administrator without two-factor sign-in can only reach `POST /api/auth/mfa/setup` (returns a setup key and `otpauth://` link) and `POST /api/auth/mfa/enable` `{code}`. Every other request returns `403 MFA_ENROLLMENT_REQUIRED`. Enabling signs out the account's other sessions and returns eight single-use recovery codes, shown once.

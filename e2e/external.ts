@@ -99,6 +99,9 @@ function marketMetadata() {
   };
 }
 
+/** SMS the server tried to send, newest last (end-to-end tests only). */
+export const sentSms: { to: string; message: string }[] = [];
+
 export function installExternalStubs() {
   const local = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -111,6 +114,21 @@ export function installExternalStubs() {
       return Response.json({ status: "ok", count: 0, alerts: [] });
     if (url.href === MARKET_SOURCE.metadataUrl)
       return Response.json(marketMetadata());
+    if (url.origin === "https://api.sandbox.africastalking.com") {
+      const form = new URLSearchParams(String(init?.body ?? ""));
+      sentSms.push({ to: form.get("to")!, message: form.get("message")! });
+      return Response.json({
+        SMSMessageData: {
+          Recipients: [
+            {
+              number: form.get("to"),
+              messageId: `ATXid_e2e_${sentSms.length}`,
+              statusCode: 101,
+            },
+          ],
+        },
+      });
+    }
     if (url.href === MARKET_SOURCE.downloadUrl)
       return new Response(marketCsv(), {
         headers: { "content-type": "text/csv" },

@@ -55,6 +55,7 @@ import {
 } from "./channels/index.js";
 import { createChannelBridge } from "./channel-bridge.js";
 import { DatabaseRateLimitStore } from "./rate-limit.js";
+import { mountPasswordRecovery } from "./password-recovery.js";
 import {
   MFA_ENROLLMENT_PATHS,
   enrollmentRequired,
@@ -94,6 +95,7 @@ export function createApp(
   dependencies: {
     whatsappFetch?: typeof fetch;
     marketFetch?: typeof fetch;
+    smsFetch?: typeof fetch;
     logger?: Logger;
   } = {},
 ) {
@@ -267,6 +269,11 @@ export function createApp(
     res.json(result);
   });
   mountMfaSignIn(app, db, config, authLimiter);
+  mountPasswordRecovery(app, db, config, env, {
+    limiter: authLimiter,
+    logger,
+    smsFetch: dependencies.smsFetch,
+  });
   app.use("/api", authenticate(db, config));
   app.get("/api/auth/session", (req: AuthRequest, res) =>
     res.json({ user: req.user, csrfToken: req.csrfToken }),
@@ -1068,6 +1075,40 @@ export function createApp(
           "users",
           id,
         );
+        return { status: 200, body: rows[0] };
+      });
+      res.status(result.status).json(result.body);
+    },
+  );
+  app.post(
+    "/api/admin/users/:id/password",
+    requireAdmin,
+    async (req: AuthRequest, res) => {
+      const { password } = z
+        .object({ password: z.string().min(14).max(256) })
+        .strict()
+        .parse(req.body);
+      const passwordHash = await hashPassword(password);
+      const result = await mutate(db, req, async (tx) => {
+        const id = String(req.params.id);
+        const user = req.user!;
+        if (id === user.id)
+          throw new ApiError(
+            409,
+            "SELF_ACCESS_CHANGE",
+            "Change your own password from your account settings.",
+          );
+        const { rows } = await tx.query(
+          `UPDATE users SET password_hash=$3,password_change_required=true WHERE id=$1 AND tenant_id=$2 RETURNING id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",mfa_enabled_at IS NOT NULL AS "mfaEnabled",created_at AS "createdAt"`,
+          [id, user.organizationId, passwordHash],
+        );
+        if (!rows[0]) throw new ApiError(404, "NOT_FOUND", "Member not found.");
+        await tx.query(`DELETE FROM sessions WHERE user_id=$1`, [id]);
+        await tx.query(
+          `DELETE FROM password_resets WHERE user_id=$1 AND used_at IS NULL`,
+          [id],
+        );
+        await audit(tx, user, "user.password_reset", "users", id);
         return { status: 200, body: rows[0] };
       });
       res.status(result.status).json(result.body);

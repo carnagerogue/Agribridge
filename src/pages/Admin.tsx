@@ -51,10 +51,12 @@ export default function Admin() {
   const [revision, setRevision] = useState(0),
     [adding, setAdding] = useState(false);
   const [accessChange, setAccessChange] = useState<TeamMember | null>(null),
-    [mfaReset, setMfaReset] = useState<TeamMember | null>(null);
+    [mfaReset, setMfaReset] = useState<TeamMember | null>(null),
+    [passwordReset, setPasswordReset] = useState<TeamMember | null>(null);
   const closeEditor = useCallback(() => setAdding(false), []);
   const closeAccess = useCallback(() => setAccessChange(null), []);
   const closeMfaReset = useCallback(() => setMfaReset(null), []);
+  const closePasswordReset = useCallback(() => setPasswordReset(null), []);
   const admin = user?.role === "admin";
   useEffect(() => {
     let active = true;
@@ -133,6 +135,20 @@ export default function Admin() {
       accessChange.active
         ? "Account access suspended. Existing sessions have ended."
         : "Account access restored.",
+    );
+  }
+  async function setTemporaryPassword(form: FormData) {
+    if (!passwordReset) return;
+    await request<TeamMember>(
+      `/api/admin/users/${passwordReset.id}/password`,
+      "POST",
+      { password: String(form.get("password") ?? "") },
+      crypto.randomUUID(),
+    );
+    closePasswordReset();
+    setRevision((value) => value + 1);
+    notify(
+      "Temporary password set. Share it securely; it must be changed at the next sign-in.",
     );
   }
   async function resetTwoFactor() {
@@ -362,6 +378,15 @@ export default function Admin() {
                             >
                               {member.active ? "Suspend" : "Restore access"}
                             </Button>
+                            {member.active && (
+                              <Button
+                                variant="ghost"
+                                disabled={!online}
+                                onClick={() => setPasswordReset(member)}
+                              >
+                                Set temporary password
+                              </Button>
+                            )}
                             {member.mfaEnabled && (
                               <Button
                                 variant="ghost"
@@ -457,6 +482,39 @@ export default function Admin() {
                   : "This person will be able to sign in again with their existing role and password."}
               </Notice>
             </div>
+          </Form>
+        </Modal>
+      )}
+      {passwordReset && admin && (
+        <Modal
+          title="Set a temporary password?"
+          description={`${passwordReset.name} · ${label(passwordReset.role)}`}
+          onClose={closePasswordReset}
+        >
+          <Form
+            onSubmit={setTemporaryPassword}
+            onCancel={closePasswordReset}
+            submitLabel="Set temporary password"
+          >
+            <div className="op-full">
+              <Notice tone="warning">
+                Use this when someone cannot reset their own password by SMS.
+                Confirm who is asking first. They will be signed out and must
+                choose a new password at their next sign-in. Two-factor sign-in
+                stays on.
+              </Notice>
+            </div>
+            <Field label="Temporary password (at least 14 characters)">
+              <input
+                name="password"
+                type="text"
+                autoComplete="off"
+                spellCheck={false}
+                minLength={14}
+                maxLength={256}
+                required
+              />
+            </Field>
           </Form>
         </Modal>
       )}

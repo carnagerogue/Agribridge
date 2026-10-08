@@ -55,6 +55,10 @@ Provider acceptance means `sent` or `queued`. Only a delivery callback can mark 
 
 Requests use fixed HTTPS provider endpoints, no redirects, an eight-second timeout, bounded responses and sanitized errors. Callback ingress has a separate ceiling of 600 requests/minute/IP before body parsing; this is a per-process control. A national deployment needs a shared gateway limiter and a provider-specific burst capacity based on load testing. No real messages are sent by tests. Run `npx tsx --test server/channels/channels.test.ts`.
 
+## Account security messages
+
+Password reset codes are transactional messages sent only when the account holder requests one for their own number. They do not depend on, or grant, marketing permission, and STOP does not block them. Each request counts against the same daily messaging caps (global, organization and recipient), and a number receives at most three codes an hour. The message text is never stored; only a hash of the code is kept, for ten minutes.
+
 ## WhatsApp support inbox
 
 See [activation from zero](whatsapp-setup.md) for owner-facing setup and live acceptance tests.

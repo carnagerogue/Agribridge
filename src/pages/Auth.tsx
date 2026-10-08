@@ -7,6 +7,8 @@ export default function Auth() {
   const {
     login,
     verifyMfa,
+    requestRecovery,
+    confirmRecovery,
     notify,
     demoLogin,
     demo,
@@ -15,7 +17,12 @@ export default function Auth() {
   const navigate = useNavigate();
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
-    [challenge, setChallenge] = useState("");
+    [challenge, setChallenge] = useState(""),
+    // Password recovery: the number a code was requested for, if any.
+    [recovery, setRecovery] = useState<{
+      phone: string;
+      message?: string;
+    } | null>(null);
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -26,6 +33,42 @@ export default function Auth() {
         String(data.get("email")),
         String(data.get("password")),
       );
+      if (next) setChallenge(next.challenge);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function sendResetCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const phone = String(new FormData(event.currentTarget).get("phone"));
+    setBusy("recovery");
+    setError("");
+    try {
+      setRecovery({ phone, message: await requestRecovery(phone) });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    if (data.get("password") !== data.get("confirm")) {
+      setError("The new passwords must match.");
+      return;
+    }
+    setBusy("reset");
+    setError("");
+    try {
+      const next = await confirmRecovery(
+        recovery!.phone,
+        String(data.get("code")),
+        String(data.get("password")),
+      );
+      setRecovery(null);
       if (next) setChallenge(next.challenge);
     } catch (e) {
       setError((e as Error).message);
@@ -146,7 +189,95 @@ export default function Auth() {
             </Button>
           </form>
         )}
-        {!challenge && demo && (
+        {recovery && !challenge && (
+          <div>
+            <h3>Reset your password</h3>
+            {!recovery.message ? (
+              <form onSubmit={sendResetCode}>
+                <p>
+                  Enter the mobile number on your account. We will send a
+                  6-digit code by SMS.
+                </p>
+                <Field label="Mobile number">
+                  <input
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    required
+                    defaultValue={recovery.phone || "+256"}
+                    pattern="\+256[37][0-9]{8}"
+                    title="A Uganda number such as +2567XXXXXXXX"
+                  />
+                </Field>
+                <Button
+                  type="submit"
+                  busy={busy === "recovery"}
+                  disabled={!!busy}
+                >
+                  Send code
+                  <ArrowRight size={17} />
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={resetPassword}>
+                <p role="status">{recovery.message}</p>
+                <Field label="Code from SMS">
+                  <input
+                    name="code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    required
+                  />
+                </Field>
+                <Field label="New password">
+                  <input
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={14}
+                    maxLength={256}
+                    required
+                  />
+                </Field>
+                <Field label="Confirm new password">
+                  <input
+                    name="confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={14}
+                    required
+                  />
+                </Field>
+                <Button type="submit" busy={busy === "reset"} disabled={!!busy}>
+                  Set new password
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!!busy}
+                  onClick={() => setRecovery({ phone: recovery.phone })}
+                >
+                  Send a new code
+                </Button>
+              </form>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={!!busy}
+              onClick={() => {
+                setRecovery(null);
+                setError("");
+              }}
+            >
+              Back to sign in
+            </Button>
+          </div>
+        )}
+        {!challenge && !recovery && demo && (
           <div className="demo-entry">
             <span className="small-label">EXPLORE THE WORKING DEMO</span>
             <p>
@@ -172,7 +303,7 @@ export default function Auth() {
             <div className="auth-divider">or sign in to your account</div>
           </div>
         )}
-        <form onSubmit={signIn} hidden={!!challenge}>
+        <form onSubmit={signIn} hidden={!!challenge || !!recovery}>
           <Field label="Email or phone number">
             <input
               name="email"
@@ -199,6 +330,17 @@ export default function Auth() {
           >
             Sign in
             <ArrowRight size={17} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={!!busy}
+            onClick={() => {
+              setRecovery({ phone: "" });
+              setError("");
+            }}
+          >
+            Forgot your password?
           </Button>
         </form>
         <p className="auth-note">

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { SECURE_ADMIN, SECURE_BASE_URL } from "./accounts.ts";
+import { SECURE_ADMIN, SECURE_BASE_URL, SECURE_FARMER } from "./accounts.ts";
 import { currentStep, totpCode } from "../server/mfa.ts";
 import { expect, test } from "./fixtures.ts";
 
@@ -52,6 +52,41 @@ test("an administrator sets up two-factor sign-in, then needs a code to sign in"
   await page.getByRole("button", { name: "Verify and sign in" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Hello, Esther.",
+  );
+  expect(consoleErrors).toEqual([]);
+});
+
+test("a farmer resets a forgotten password with a code sent by SMS", async ({
+  page,
+  request,
+  consoleErrors,
+}) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Forgot your password?" }).click();
+  await page.getByLabel("Mobile number").fill(SECURE_FARMER.phone);
+  await page.getByRole("button", { name: "Send code" }).click();
+  await expect(page.getByText(/If an account uses this number/)).toBeVisible();
+  let code = "";
+  await expect
+    .poll(async () => {
+      const sent = (await (
+        await request.get(`${SECURE_BASE_URL}/__e2e/sms`)
+      ).json()) as { to: string; message: string }[];
+      code =
+        sent
+          .filter((message) => message.to === SECURE_FARMER.phone)
+          .at(-1)
+          ?.message.match(/\b(\d{6})\b/)?.[1] ?? "";
+      return code;
+    })
+    .toMatch(/^\d{6}$/);
+  const newPassword = "a fresh farmer passphrase";
+  await page.getByLabel("Code from SMS").fill(code);
+  await page.getByLabel("New password", { exact: true }).fill(newPassword);
+  await page.getByLabel("Confirm new password").fill(newPassword);
+  await page.getByRole("button", { name: "Set new password" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "Hello, Robert.",
   );
   expect(consoleErrors).toEqual([]);
 });

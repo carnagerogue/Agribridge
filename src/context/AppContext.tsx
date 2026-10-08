@@ -67,6 +67,14 @@ type Context = {
     code: string,
   ) => Promise<{ recoveryCodesRemaining?: number }>;
   setupMfa: () => Promise<{ secret: string; otpauthUri: string }>;
+  /** Sends a reset code by SMS; resolves with the server's neutral message. */
+  requestRecovery: (phone: string) => Promise<string>;
+  /** Resolves with a challenge when the account also needs a second factor. */
+  confirmRecovery: (
+    phone: string,
+    code: string,
+    newPassword: string,
+  ) => Promise<{ challenge: string } | undefined>;
   /** Turns on two-factor sign-in; call `finish` once codes are saved. */
   enableMfa: (
     code: string,
@@ -656,6 +664,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await accept(session, true);
     return { recoveryCodesRemaining: session.recoveryCodesRemaining };
   };
+  const requestRecovery = async (phone: string) =>
+    (
+      await request<{ message: string }>("/api/auth/recovery/request", "POST", {
+        phone,
+      })
+    ).message;
+  const confirmRecovery = async (
+    phone: string,
+    code: string,
+    newPassword: string,
+  ) => {
+    const revision = generation.current;
+    const response = await request<
+      | { user: User; csrfToken: string }
+      | { mfaRequired: true; challenge: string }
+    >("/api/auth/recovery/confirm", "POST", { phone, code, newPassword });
+    if (revision !== generation.current)
+      throw new Error("Sign-in was interrupted. Please sign in again.");
+    if ("mfaRequired" in response) return { challenge: response.challenge };
+    await accept(response, true);
+    return undefined;
+  };
   const setupMfa = () =>
     request<{ secret: string; otpauthUri: string }>(
       "/api/auth/mfa/setup",
@@ -1008,6 +1038,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         verifyMfa,
         setupMfa,
         enableMfa,
+        requestRecovery,
+        confirmRecovery,
         changePassword,
         logout,
         lockWorkspace,
