@@ -16,6 +16,16 @@ Administrators can list and create tenant members at `/api/admin/users`. An emai
 
 `POST /api/auth/login` accepts `{email: "email-or-phone", password}`. `POST /api/auth/password` accepts `{currentPassword,newPassword}`, revokes every existing session, and returns a new `{user,csrfToken}` session. Administrators can suspend or reactivate another tenant member using `PATCH /api/admin/users/:id` with `{active}`; suspension immediately revokes all of that member's sessions. Self-suspension is blocked. Password recovery, administrator MFA and external identity federation still need operational integration before a broad production launch.
 
+### Administrator two-factor sign-in
+
+Administrators must use a time-based one-time code (RFC 6238; any standard authenticator app) whenever `MFA_ENCRYPTION_KEY` is set, which production requires. Demo mode is exempt. An administrator without two-factor sign-in can only reach `POST /api/auth/mfa/setup` (returns a setup key and `otpauth://` link) and `POST /api/auth/mfa/enable` `{code}`. Every other request returns `403 MFA_ENROLLMENT_REQUIRED`. Enabling signs out the account's other sessions and returns eight single-use recovery codes, shown once.
+
+For an enrolled account, `POST /api/auth/login` returns `{mfaRequired: true, challenge}` instead of a session. `POST /api/auth/mfa/verify` `{challenge, code}` accepts an authenticator code or a recovery code and returns the session. A challenge lasts five minutes and allows five attempts. An authenticator code is accepted once, within one 30-second step of clock drift. If the key is missing, an enrolled account cannot sign in at all (`503 MFA_UNAVAILABLE`) rather than falling back to a password.
+
+Secrets are encrypted with AES-256-GCM and bound to the account; recovery codes and challenges are stored only as hashes. Back up `MFA_ENCRYPTION_KEY` separately from database backups. If it is lost, every administrator must set up two-factor sign-in again. Key rotation is not yet implemented.
+
+Another administrator can reset a lost authenticator with `DELETE /api/admin/users/:id/mfa`, which also signs that account out. If no other administrator can, run `RESET_MFA_ACCOUNT=email-or-phone npm run admin:reset-mfa:production` with server credentials. Confirm the person's identity outside the application first.
+
 ## Security and persistence
 
 - Opaque, random, server-side sessions. Only session-token hashes are stored; cookies are HttpOnly, SameSite=Lax, and Secure with a `__Host-` name in production. Session lifetime is 12 hours.

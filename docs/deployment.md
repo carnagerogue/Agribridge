@@ -39,6 +39,8 @@ MESSAGING_RECIPIENT_DAILY_LIMIT=5
 
 The database service publishes no host port. Its private network accepts only TLS TCP connections with SCRAM authentication. Local maintenance uses the matching operating-system user. PostgreSQL initializes a separate `agribridge_app` role without superuser, role-creation or database-creation privileges; it can create its application tables in the `public` schema. Startup migrations (`DATABASE_MIGRATIONS=auto`) require those DDL privileges. A larger production deployment should separate them: run `npm run db:migrate:production` once per release with migration credentials, and run the application role with `DATABASE_MIGRATIONS=verify` and ordinary read/write privileges only.
 
+Set `MFA_ENCRYPTION_KEY` (`openssl rand -base64 32`) before the first production start; startup refuses to run without it. It encrypts administrator two-factor secrets, so keep a copy in the organization's secret manager, separate from database backups: a restored database is unusable for administrator sign-in without it, and losing it means every administrator sets up two-factor sign-in again (`npm run admin:reset-mfa:production`).
+
 Compose secret-file mounts are not an encrypted secret store. Protect source files, Docker access, host backups and environment files. Production orchestration should inject credentials from a managed secret service. Rotating files on an already initialized PostgreSQL volume does **not** change the stored database role passwords; perform a coordinated database role-password rotation and update the app credential.
 
 ## Start and provision

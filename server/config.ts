@@ -10,6 +10,8 @@ export type AppConfig = {
   databaseCa?: string;
   /** `auto` applies pending migrations at startup; `verify` only checks them. */
   databaseMigrations: "auto" | "verify";
+  /** AES-256 key for administrator two-factor secrets; required in production. */
+  mfaKey?: Buffer;
   cookieName: string;
   sessionHours: number;
 };
@@ -49,6 +51,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const databaseMigrations = env.DATABASE_MIGRATIONS || "auto";
   if (databaseMigrations !== "auto" && databaseMigrations !== "verify")
     throw new Error('DATABASE_MIGRATIONS must be "auto" or "verify".');
+  let mfaKey: Buffer | undefined;
+  if (env.MFA_ENCRYPTION_KEY) {
+    mfaKey = Buffer.from(env.MFA_ENCRYPTION_KEY, "base64");
+    if (mfaKey.length !== 32)
+      throw new Error(
+        "MFA_ENCRYPTION_KEY must be 32 bytes, base64-encoded (openssl rand -base64 32).",
+      );
+  } else if (production && !demo)
+    throw new Error(
+      "Production requires MFA_ENCRYPTION_KEY for administrator two-factor sign-in. Generate one with: openssl rand -base64 32",
+    );
   const port = Number(env.PORT || 3001);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("Invalid PORT.");
@@ -63,6 +76,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     databaseTls: production || env.DATABASE_TLS === "true",
     databaseCa: env.DATABASE_CA_CERT,
     databaseMigrations,
+    mfaKey,
     cookieName: production ? "__Host-agribridge" : "agribridge_session",
     sessionHours: 12,
   };

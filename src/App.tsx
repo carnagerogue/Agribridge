@@ -12,6 +12,7 @@ import { Shell } from "./components/Shell";
 import { Empty } from "./components/ui";
 import Auth from "./pages/Auth";
 import PasswordChange from "./pages/PasswordChange";
+import MfaSetup from "./pages/MfaSetup";
 import Home from "./pages/Home";
 import Farms from "./pages/Farms";
 import Settings from "./pages/Settings";
@@ -86,6 +87,7 @@ function Application() {
     );
   if (!user) return <Auth />;
   if (user.passwordChangeRequired) return <PasswordChange />;
+  if (user.mfaEnrollmentRequired) return <MfaSetup />;
   if (location.pathname === "/login") return <Navigate to="/" replace />;
   return (
     <Routes>

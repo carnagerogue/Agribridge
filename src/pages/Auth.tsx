@@ -4,18 +4,53 @@ import { Sprout, ArrowRight, WifiOff, BookOpen, Users } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Button, ErrorMessage, Field } from "../components/ui";
 export default function Auth() {
-  const { login, demoLogin, demo, error: connectionError } = useApp();
+  const {
+    login,
+    verifyMfa,
+    notify,
+    demoLogin,
+    demo,
+    error: connectionError,
+  } = useApp();
   const navigate = useNavigate();
   const [error, setError] = useState(""),
-    [busy, setBusy] = useState("");
+    [busy, setBusy] = useState(""),
+    [challenge, setChallenge] = useState("");
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     setBusy("login");
+    setError("");
     try {
-      await login(String(data.get("email")), String(data.get("password")));
+      const next = await login(
+        String(data.get("email")),
+        String(data.get("password")),
+      );
+      if (next) setChallenge(next.challenge);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function confirmCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setBusy("code");
+    setError("");
+    try {
+      const { recoveryCodesRemaining } = await verifyMfa(
+        challenge,
+        String(data.get("code")),
+      );
+      if (recoveryCodesRemaining !== undefined)
+        notify(
+          `Recovery code used. ${recoveryCodesRemaining} left. Ask another administrator to reset two-factor sign-in if your phone is lost.`,
+        );
+    } catch (e) {
+      const failure = e as Error & { code?: string };
+      if (failure.code === "MFA_CHALLENGE_EXPIRED") setChallenge("");
+      setError(failure.message);
     } finally {
       setBusy("");
     }
@@ -74,7 +109,44 @@ export default function Auth() {
         {(error || connectionError) && (
           <ErrorMessage message={error || connectionError} />
         )}
-        {demo && (
+        {challenge && (
+          <form onSubmit={confirmCode}>
+            <p>
+              Enter the 6-digit code from your authenticator app. If your phone
+              is unavailable, use one of your recovery codes.
+            </p>
+            <Field label="Authentication code">
+              <input
+                name="code"
+                type="text"
+                inputMode="text"
+                autoComplete="one-time-code"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                minLength={6}
+                maxLength={20}
+                autoFocus
+              />
+            </Field>
+            <Button type="submit" busy={busy === "code"} disabled={!!busy}>
+              Verify and sign in
+              <ArrowRight size={17} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={!!busy}
+              onClick={() => {
+                setChallenge("");
+                setError("");
+              }}
+            >
+              Use a different account
+            </Button>
+          </form>
+        )}
+        {!challenge && demo && (
           <div className="demo-entry">
             <span className="small-label">EXPLORE THE WORKING DEMO</span>
             <p>
@@ -100,7 +172,7 @@ export default function Auth() {
             <div className="auth-divider">or sign in to your account</div>
           </div>
         )}
-        <form onSubmit={signIn}>
+        <form onSubmit={signIn} hidden={!!challenge}>
           <Field label="Email or phone number">
             <input
               name="email"

@@ -56,7 +56,21 @@ type Context = {
   queue: QueuedMutation[];
   lastSync: string;
   toast: string;
-  login: (email: string, password: string) => Promise<void>;
+  /** Resolves with a challenge when the account needs a second factor. */
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ challenge: string } | undefined>;
+  /** Completes sign-in; reports remaining recovery codes when one was used. */
+  verifyMfa: (
+    challenge: string,
+    code: string,
+  ) => Promise<{ recoveryCodesRemaining?: number }>;
+  setupMfa: () => Promise<{ secret: string; otpauthUri: string }>;
+  /** Turns on two-factor sign-in; call `finish` once codes are saved. */
+  enableMfa: (
+    code: string,
+  ) => Promise<{ recoveryCodes: string[]; finish: () => Promise<void> }>;
   changePassword: (
     currentPassword: string,
     newPassword: string,
@@ -424,7 +438,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOnline(navigator.onLine);
       const scope = scopeOf(session.user);
       const enabled =
-        hasOfflineConsent(scope) && !session.user.passwordChangeRequired;
+        hasOfflineConsent(scope) &&
+        !session.user.passwordChangeRequired &&
+        !session.user.mfaEnrollmentRequired;
       setOffline(enabled);
       try {
         if (previous && scopeOf(previous) !== scope) {
@@ -602,19 +618,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [online, user?.id]);
 
   useEffect(() => {
-    if (user && online && !user.passwordChangeRequired)
+    if (
+      user &&
+      online &&
+      !user.passwordChangeRequired &&
+      !user.mfaEnrollmentRequired
+    )
       void refresh().catch(() => {});
-  }, [user?.id, user?.passwordChangeRequired, online, refresh]);
+  }, [
+    user?.id,
+    user?.passwordChangeRequired,
+    user?.mfaEnrollmentRequired,
+    online,
+    refresh,
+  ]);
   const login = async (email: string, password: string) => {
     const revision = generation.current;
-    const session = await request<{ user: User; csrfToken: string }>(
-      "/api/auth/login",
-      "POST",
-      { email, password },
-    );
+    const response = await request<
+      | { user: User; csrfToken: string }
+      | { mfaRequired: true; challenge: string }
+    >("/api/auth/login", "POST", { email, password });
+    if (revision !== generation.current)
+      throw new Error("Sign-in was interrupted. Please sign in again.");
+    if ("mfaRequired" in response) return { challenge: response.challenge };
+    await accept(response, true);
+    return undefined;
+  };
+  const verifyMfa = async (challenge: string, code: string) => {
+    const revision = generation.current;
+    const session = await request<{
+      user: User;
+      csrfToken: string;
+      recoveryCodesRemaining?: number;
+    }>("/api/auth/mfa/verify", "POST", { challenge, code });
     if (revision !== generation.current)
       throw new Error("Sign-in was interrupted. Please sign in again.");
     await accept(session, true);
+    return { recoveryCodesRemaining: session.recoveryCodesRemaining };
+  };
+  const setupMfa = () =>
+    request<{ secret: string; otpauthUri: string }>(
+      "/api/auth/mfa/setup",
+      "POST",
+      {},
+    );
+  const enableMfa = async (code: string) => {
+    const revision = generation.current;
+    const session = await request<{
+      user: User;
+      csrfToken: string;
+      recoveryCodes: string[];
+    }>("/api/auth/mfa/enable", "POST", { code });
+    // The server already replaced this session; keep the codes on screen
+    // until the person confirms they are saved.
+    setCsrfToken(session.csrfToken);
+    return {
+      recoveryCodes: session.recoveryCodes,
+      finish: async () => {
+        if (revision === generation.current) await accept(session);
+      },
+    };
   };
   const changePassword = async (
     currentPassword: string,
@@ -942,6 +1005,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lastSync,
         toast,
         login,
+        verifyMfa,
+        setupMfa,
+        enableMfa,
         changePassword,
         logout,
         lockWorkspace,

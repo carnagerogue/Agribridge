@@ -36,6 +36,7 @@ type TeamMember = {
   role: Role;
   active: boolean;
   passwordChangeRequired: boolean;
+  mfaEnabled: boolean;
   createdAt: string;
 };
 
@@ -49,9 +50,11 @@ export default function Admin() {
     [loadedAt, setLoadedAt] = useState("");
   const [revision, setRevision] = useState(0),
     [adding, setAdding] = useState(false);
-  const [accessChange, setAccessChange] = useState<TeamMember | null>(null);
+  const [accessChange, setAccessChange] = useState<TeamMember | null>(null),
+    [mfaReset, setMfaReset] = useState<TeamMember | null>(null);
   const closeEditor = useCallback(() => setAdding(false), []);
   const closeAccess = useCallback(() => setAccessChange(null), []);
+  const closeMfaReset = useCallback(() => setMfaReset(null), []);
   const admin = user?.role === "admin";
   useEffect(() => {
     let active = true;
@@ -130,6 +133,20 @@ export default function Admin() {
       accessChange.active
         ? "Account access suspended. Existing sessions have ended."
         : "Account access restored.",
+    );
+  }
+  async function resetTwoFactor() {
+    if (!mfaReset) return;
+    await request<TeamMember>(
+      `/api/admin/users/${mfaReset.id}/mfa`,
+      "DELETE",
+      undefined,
+      crypto.randomUUID(),
+    );
+    closeMfaReset();
+    setRevision((value) => value + 1);
+    notify(
+      "Two-factor sign-in was reset. That person was signed out and will set it up again at their next sign-in.",
     );
   }
   if (user?.role === "farmer")
@@ -325,18 +342,36 @@ export default function Admin() {
                               ? "Password change due"
                               : "Active"}
                         </Badge>
+                        {(member.role === "admin" || member.mfaEnabled) && (
+                          <small className="op-cell-secondary">
+                            {member.mfaEnabled
+                              ? "Two-factor sign-in on"
+                              : "Two-factor sign-in not set up"}
+                          </small>
+                        )}
                       </td>
                       <td>
                         {member.id === user?.id ? (
                           <span className="muted">Your account</span>
                         ) : (
-                          <Button
-                            variant="ghost"
-                            disabled={!online}
-                            onClick={() => setAccessChange(member)}
-                          >
-                            {member.active ? "Suspend" : "Restore access"}
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              disabled={!online}
+                              onClick={() => setAccessChange(member)}
+                            >
+                              {member.active ? "Suspend" : "Restore access"}
+                            </Button>
+                            {member.mfaEnabled && (
+                              <Button
+                                variant="ghost"
+                                disabled={!online}
+                                onClick={() => setMfaReset(member)}
+                              >
+                                Reset two-factor
+                              </Button>
+                            )}
+                          </>
                         )}
                       </td>
                     </tr>
@@ -420,6 +455,28 @@ export default function Admin() {
                 {accessChange.active
                   ? "This person will be signed out and unable to sign in. Their records remain in the workspace."
                   : "This person will be able to sign in again with their existing role and password."}
+              </Notice>
+            </div>
+          </Form>
+        </Modal>
+      )}
+      {mfaReset && admin && (
+        <Modal
+          title="Reset two-factor sign-in?"
+          description={`${mfaReset.name} · ${label(mfaReset.role)}`}
+          onClose={closeMfaReset}
+        >
+          <Form
+            onSubmit={resetTwoFactor}
+            onCancel={closeMfaReset}
+            submitLabel="Reset two-factor sign-in"
+          >
+            <div className="op-full">
+              <Notice tone="warning">
+                Only do this after confirming who is asking, for example in
+                person or by calling a number you already know. They will be
+                signed out, their recovery codes stop working, and they set up
+                two-factor sign-in again with their password.
               </Notice>
             </div>
           </Form>

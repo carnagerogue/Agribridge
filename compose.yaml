@@ -57,6 +57,7 @@ services:
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the exact public HTTPS origin}
       DATABASE_URL: ${DATABASE_URL:?Set PostgreSQL URL for agribridge_app at db:5432/agribridge}
       DATABASE_TLS: "true"
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Set a 32-byte base64 key for administrator two-factor secrets (openssl rand -base64 32)}
       NODE_EXTRA_CA_CERTS: /run/secrets/postgres_ca
       TRUST_PROXY: ${TRUST_PROXY:-0}
       OPEN_METEO_BASE_URL: ${OPEN_METEO_BASE_URL:-}

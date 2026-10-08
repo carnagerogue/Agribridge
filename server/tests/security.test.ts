@@ -115,6 +115,7 @@ test("production fails closed on demo, local DB and insecure public origin", () 
       NODE_ENV: "production",
       DATABASE_URL: "postgres://example.test/db",
       PUBLIC_ORIGIN: "https://agri.test",
+      MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
     }).databaseTls,
     true,
   );

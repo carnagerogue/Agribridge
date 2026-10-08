@@ -16,6 +16,7 @@
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist-server/index.js",
     "admin:create:production": "node dist-server/bootstrap-admin.js",
+    "admin:reset-mfa:production": "node dist-server/reset-mfa.js",
     "db:migrate:production": "node dist-server/migrate.js",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 127.0.0.1",
@@ -23,6 +24,7 @@
     "test:server": "tsx --test server/tests/*.test.ts server/channels/*.test.ts server/ai/*.test.ts",
     "test:e2e": "npm run build && playwright test",
     "admin:create": "tsx server/bootstrap-admin.ts",
+    "admin:reset-mfa": "tsx server/reset-mfa.ts",
     "db:migrate": "tsx server/migrate.ts"
   },
   "dependencies": {

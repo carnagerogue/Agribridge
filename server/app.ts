@@ -56,6 +56,14 @@ import {
 import { createChannelBridge } from "./channel-bridge.js";
 import { DatabaseRateLimitStore } from "./rate-limit.js";
 import {
+  MFA_ENROLLMENT_PATHS,
+  enrollmentRequired,
+  mountMfaEnrollment,
+  mountMfaSignIn,
+  resetMfa,
+  startMfaChallenge,
+} from "./mfa-routes.js";
+import {
   errorFields,
   logPath,
   requestId,
@@ -216,7 +224,7 @@ export function createApp(
       .strict()
       .parse(req.body);
     const { rows } = await db.query<any>(
-      `SELECT id,password_hash FROM users WHERE (lower(email)=$1 OR phone=$1) AND active=true`,
+      `SELECT id,password_hash,mfa_enabled_at FROM users WHERE (lower(email)=$1 OR phone=$1) AND active=true`,
       [input.email.toLowerCase()],
     );
     const found = rows[0];
@@ -230,6 +238,20 @@ export function createApp(
         "INVALID_CREDENTIALS",
         "Email or password is incorrect.",
       );
+    if (found.mfa_enabled_at) {
+      // Never fall back to password-only sign-in for an enrolled account.
+      if (!config.mfaKey)
+        throw new ApiError(
+          503,
+          "MFA_UNAVAILABLE",
+          "Two-factor sign-in is not available on this server. An administrator must configure MFA_ENCRYPTION_KEY.",
+        );
+      res.json({
+        mfaRequired: true,
+        challenge: await startMfaChallenge(db, found.id),
+      });
+      return;
+    }
     const result = await createSession(db, config, res, found.id);
     await audit(db, result.user, "auth.login", "sessions");
     res.json(result);
@@ -244,6 +266,7 @@ export function createApp(
     await audit(db, result.user, "auth.demo", "sessions");
     res.json(result);
   });
+  mountMfaSignIn(app, db, config, authLimiter);
   app.use("/api", authenticate(db, config));
   app.get("/api/auth/session", (req: AuthRequest, res) =>
     res.json({ user: req.user, csrfToken: req.csrfToken }),
@@ -301,6 +324,7 @@ export function createApp(
     });
     res.json(await createSession(db, config, res, user.id));
   });
+  mountMfaEnrollment(app, db, config, authLimiter);
   app.use("/api", (req: AuthRequest, _res, next) => {
     if (req.user?.passwordChangeRequired)
       return next(
@@ -308,6 +332,17 @@ export function createApp(
           403,
           "PASSWORD_CHANGE_REQUIRED",
           "Change your initial password before accessing your account.",
+        ),
+      );
+    if (
+      enrollmentRequired(req.user) &&
+      !MFA_ENROLLMENT_PATHS.has(req.baseUrl + req.path)
+    )
+      return next(
+        new ApiError(
+          403,
+          "MFA_ENROLLMENT_REQUIRED",
+          "Set up two-factor sign-in before using administrator access.",
         ),
       );
     next();
@@ -923,7 +958,7 @@ export function createApp(
   );
   app.get("/api/admin/users", requireAdmin, async (req: AuthRequest, res) => {
     const { rows } = await db.query(
-      `SELECT id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",created_at AS "createdAt" FROM users WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 500`,
+      `SELECT id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",mfa_enabled_at IS NOT NULL AS "mfaEnabled",created_at AS "createdAt" FROM users WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 500`,
       [req.user!.organizationId],
     );
     res.json(rows);
@@ -951,7 +986,7 @@ export function createApp(
       const result = await mutate(db, req, async (tx) => {
         const id = randomUUID();
         const { rows } = await tx.query(
-          `INSERT INTO users(id,tenant_id,name,email,phone,password_hash,role,password_change_required) VALUES($1,$2,$3,$4,$5,$6,$7,true) RETURNING id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",created_at AS "createdAt"`,
+          `INSERT INTO users(id,tenant_id,name,email,phone,password_hash,role,password_change_required) VALUES($1,$2,$3,$4,$5,$6,$7,true) RETURNING id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",mfa_enabled_at IS NOT NULL AS "mfaEnabled",created_at AS "createdAt"`,
           [
             id,
             req.user!.organizationId,
@@ -1020,7 +1055,7 @@ export function createApp(
             "Keep at least one active administrator.",
           );
         const { rows } = await tx.query(
-          `UPDATE users SET active=$3 WHERE id=$1 AND tenant_id=$2 RETURNING id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",created_at AS "createdAt"`,
+          `UPDATE users SET active=$3 WHERE id=$1 AND tenant_id=$2 RETURNING id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",mfa_enabled_at IS NOT NULL AS "mfaEnabled",created_at AS "createdAt"`,
           [id, user.organizationId, active],
         );
         if (!rows[0]) throw new ApiError(404, "NOT_FOUND", "Member not found.");
@@ -1034,6 +1069,35 @@ export function createApp(
           id,
         );
         return { status: 200, body: rows[0] };
+      });
+      res.status(result.status).json(result.body);
+    },
+  );
+  app.delete(
+    "/api/admin/users/:id/mfa",
+    requireAdmin,
+    async (req: AuthRequest, res) => {
+      const result = await mutate(db, req, async (tx) => {
+        const id = String(req.params.id);
+        const user = req.user!;
+        if (id === user.id)
+          throw new ApiError(
+            409,
+            "SELF_ACCESS_CHANGE",
+            "Ask another administrator to reset your two-factor sign-in.",
+          );
+        const { rows } = await tx.query(
+          `SELECT id FROM users WHERE id=$1 AND tenant_id=$2 FOR UPDATE`,
+          [id, user.organizationId],
+        );
+        if (!rows[0]) throw new ApiError(404, "NOT_FOUND", "Member not found.");
+        await resetMfa(tx, id);
+        await audit(tx, user, "user.mfa_reset", "users", id);
+        const member = await tx.query(
+          `SELECT id,name,email,phone,role,active,password_change_required AS "passwordChangeRequired",mfa_enabled_at IS NOT NULL AS "mfaEnabled",created_at AS "createdAt" FROM users WHERE id=$1`,
+          [id],
+        );
+        return { status: 200, body: member.rows[0] };
       });
       res.status(result.status).json(result.body);
     },

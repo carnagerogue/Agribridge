@@ -17,6 +17,10 @@ export type User = {
   organizationId: string;
   organizationName: string;
   passwordChangeRequired?: boolean;
+  /** Two-factor sign-in is set up for this account. */
+  mfaEnabled?: boolean;
+  /** An administrator must set up two-factor sign-in before anything else. */
+  mfaEnrollmentRequired?: boolean;
 };
 export interface AuthRequest extends Request {
   user?: User;
@@ -55,6 +59,27 @@ export function safeEqual(a: string, b: string) {
   const second = Buffer.from(b);
   return first.length === second.length && timingSafeEqual(first, second);
 }
+/** Two-factor sign-in is enforced when an encryption key is configured, outside demos. */
+export const mfaEnforced = (config: AppConfig) =>
+  !config.demo && config.mfaKey !== undefined;
+
+const USER_COLUMNS = `u.id,u.name,u.role,u.tenant_id,u.password_change_required,u.mfa_enabled_at,o.name AS organization_name`;
+function toUser(row: any, config: AppConfig): User {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    organizationId: row.tenant_id,
+    organizationName: row.organization_name,
+    passwordChangeRequired: row.password_change_required,
+    mfaEnabled: row.mfa_enabled_at !== null,
+    mfaEnrollmentRequired:
+      row.role === "admin" &&
+      mfaEnforced(config) &&
+      row.mfa_enabled_at === null,
+  };
+}
+
 export function requireOperator(
   req: AuthRequest,
   _res: Response,
@@ -111,7 +136,7 @@ export function authenticate(db: Database, config: AppConfig) {
         throw new ApiError(401, "UNAUTHENTICATED", "Please sign in.");
       const tokenHash = sha256(token);
       const { rows } = await db.query<any>(
-        `SELECT u.id,u.name,u.role,u.tenant_id,u.password_change_required,o.name AS organization_name,s.csrf_token FROM sessions s JOIN users u ON u.id=s.user_id JOIN organizations o ON o.id=u.tenant_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true`,
+        `SELECT ${USER_COLUMNS},s.csrf_token FROM sessions s JOIN users u ON u.id=s.user_id JOIN organizations o ON o.id=u.tenant_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true`,
         [tokenHash],
       );
       const user = rows[0];
@@ -121,14 +146,7 @@ export function authenticate(db: Database, config: AppConfig) {
           "UNAUTHENTICATED",
           "Your session has expired. Please sign in.",
         );
-      req.user = {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        organizationId: user.tenant_id,
-        organizationName: user.organization_name,
-        passwordChangeRequired: user.password_change_required,
-      };
+      req.user = toUser(user, config);
       req.csrfToken = user.csrf_token;
       req.sessionHash = tokenHash;
       next();
@@ -162,19 +180,8 @@ export async function createSession(
     maxAge: config.sessionHours * 3600_000,
   });
   const { rows } = await db.query<any>(
-    `SELECT u.id,u.name,u.role,u.tenant_id,u.password_change_required,o.name AS organization_name FROM users u JOIN organizations o ON o.id=u.tenant_id WHERE u.id=$1`,
+    `SELECT ${USER_COLUMNS} FROM users u JOIN organizations o ON o.id=u.tenant_id WHERE u.id=$1`,
     [userId],
   );
-  const user = rows[0];
-  return {
-    user: {
-      id: user.id,
-      name: user.name,
-      role: user.role,
-      organizationId: user.tenant_id,
-      organizationName: user.organization_name,
-      passwordChangeRequired: user.password_change_required,
-    } as User,
-    csrfToken,
-  };
+  return { user: toUser(rows[0], config), csrfToken };
 }

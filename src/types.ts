@@ -6,6 +6,9 @@ export type User = {
   organizationId: string;
   organizationName: string;
   passwordChangeRequired?: boolean;
+  mfaEnabled?: boolean;
+  /** Administrators set up two-factor sign-in before anything else. */
+  mfaEnrollmentRequired?: boolean;
 };
 export type Entity = {
   id: string;

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { SECURE_BASE_URL, SECURE_PORT } from "./e2e/accounts.ts";
 
 const port = Number(process.env.E2E_PORT || 5199);
 const baseURL = `http://127.0.0.1:${port}`;
@@ -29,11 +30,20 @@ export default defineConfig({
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
       : {},
   },
-  webServer: {
-    command: "npx tsx e2e/server.ts",
-    url: `${baseURL}/api/health`,
-    reuseExistingServer: false,
-    timeout: 60_000,
-    env: { E2E_PORT: String(port) },
-  },
+  webServer: [
+    {
+      command: "npx tsx e2e/server.ts",
+      url: `${baseURL}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { E2E_PORT: String(port) },
+    },
+    {
+      command: "npx tsx e2e/server.ts",
+      url: `${SECURE_BASE_URL}/api/health`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { E2E_MODE: "secure", E2E_PORT: String(SECURE_PORT) },
+    },
+  ],
 });
