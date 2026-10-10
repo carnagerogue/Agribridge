@@ -1,3 +1,38 @@
+export const landingStory = [
+  {
+    id: "fields",
+    label: "Growing",
+    title: "Good things",
+    emphasis: "grow together.",
+    description:
+      "Your land. Your people. Your next step. One connected workspace for farmers and cooperatives.",
+  },
+  {
+    id: "harvest",
+    label: "Harvesting",
+    title: "Every harvest,",
+    emphasis: "accounted for.",
+    description:
+      "Record what you harvest, track quality checks and keep every lot connected to the farm it came from.",
+  },
+  {
+    id: "transport",
+    label: "Transporting",
+    title: "Good harvests.",
+    emphasis: "Going places.",
+    description:
+      "Bring farmers and collection teams together, with shared harvest records and coordinated pickup plans.",
+  },
+  {
+    id: "market",
+    label: "Selling",
+    title: "Know your crop.",
+    emphasis: "Know its value.",
+    description:
+      "Compare published reference prices, record your sales and plan your next step with more context.",
+  },
+] as const;
+
 export const landingStages = [
   {
     id: "prepare",
