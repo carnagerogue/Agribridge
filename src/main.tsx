@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles/global.css";
 import "./styles/operations.css";
 import "./styles/refinement.css";
+import "./styles/workspace.css";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />

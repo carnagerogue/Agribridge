@@ -200,7 +200,13 @@ export function FarmEditor({
     </Modal>
   );
 }
-function TaskEditor({ onClose }: { onClose: () => void }) {
+export function TaskEditor({
+  onClose,
+  farmId = "",
+}: {
+  onClose: () => void;
+  farmId?: string;
+}) {
   const { data, mutate, online } = useApp();
   const [notes, setNotes] = useState("");
   return (
@@ -242,7 +248,7 @@ function TaskEditor({ onClose }: { onClose: () => void }) {
           />
         </Field>
         <Field label="Farm">
-          <select name="farmId">
+          <select name="farmId" defaultValue={farmId}>
             <option value="">General task</option>
             {data.farms.map((f) => (
               <option key={f.id} value={f.id}>
@@ -301,6 +307,8 @@ export default function Farms() {
   const requestedTaskId = tab === "tasks" ? params.get("task") : null;
   const selectedTaskId = findLinkedTask(data.tasks, requestedTaskId)?.id;
   const selectedTaskRef = useRef<HTMLDivElement>(null);
+  const selectedFarmRef = useRef<HTMLElement>(null);
+  const selectedFarmId = tab === "farms" ? params.get("farm") : null;
   const tasksHeadingRef = useRef<HTMLHeadingElement>(null);
   const allTaskParams = new URLSearchParams(params);
   allTaskParams.delete("task");
@@ -312,6 +320,14 @@ export default function Farms() {
     });
     return () => cancelAnimationFrame(frame);
   }, [loading, selectedTaskId]);
+  useEffect(() => {
+    if (loading || !selectedFarmId) return;
+    setQuery("");
+    const frame = requestAnimationFrame(() =>
+      revealRecordTarget(selectedFarmRef.current, "center"),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [loading, selectedFarmId]);
   const [query, setQuery] = useState(""),
     [editor, setEditor] = useState<Farm | true | null>(null),
     [addTask, setAddTask] = useState(false),
@@ -394,7 +410,12 @@ export default function Farms() {
           </div>
           <div className="farm-grid">
             {farms.map((f) => (
-              <article className="farm-card" key={f.id}>
+              <article
+                className={`farm-card ${selectedFarmId === f.id ? "workspace-record-target" : ""}`}
+                key={f.id}
+                ref={selectedFarmId === f.id ? selectedFarmRef : undefined}
+                tabIndex={selectedFarmId === f.id ? -1 : undefined}
+              >
                 <div className={`farm-card-top crop-${f.crop.toLowerCase()}`}>
                   <div className="crop-emblem">
                     <Sprout size={42} strokeWidth={1.2} />

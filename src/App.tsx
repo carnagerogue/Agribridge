@@ -12,9 +12,9 @@ import { Shell } from "./components/Shell";
 import { Empty } from "./components/ui";
 import Auth from "./pages/Auth";
 import PasswordChange from "./pages/PasswordChange";
-import Home from "./pages/Home";
-import Farms from "./pages/Farms";
-import Settings from "./pages/Settings";
+const Home = lazy(() => import("./pages/Home"));
+const Farms = lazy(() => import("./pages/Farms"));
+const Settings = lazy(() => import("./pages/Settings"));
 const Landing = lazy(() => import("./pages/Landing"));
 const Learn = lazy(() => import("./pages/Learn"));
 const LessonReader = lazy(() =>

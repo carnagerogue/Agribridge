@@ -26,6 +26,7 @@ import {
 import { useApp } from "../context/AppContext";
 import { initials } from "../lib/format";
 import { AppUpdate } from "./AppUpdate";
+import { WorkspaceSearch } from "./WorkspaceSearch";
 import { Skeleton, trapFocus } from "./ui";
 import {
   CORE_NAVIGATION,
@@ -308,12 +309,14 @@ export function Shell() {
       <div className="main-shell" inert={drawerOpen}>
         <header className="topbar">
           <div className="breadcrumbs">
+            <span>Workspace / </span>
             <strong>{currentLabel}</strong>
           </div>
           <Link to="/" className="mobile-brand">
             <Sprout size={27} />
             Agribridge
           </Link>
+          <WorkspaceSearch />
           {!mobile && (
             <div className="topbar-right">
               {!online ? (
