@@ -17,7 +17,8 @@ export type AppConfig = {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const production = env.NODE_ENV === "production";
   const demo = env.AGRIBRIDGE_DEMO === "true";
-  const publicOrigin = env.PUBLIC_ORIGIN || "http://localhost:5173";
+  const publicOrigin =
+    env.PUBLIC_ORIGIN || env.RENDER_EXTERNAL_URL || "http://localhost:5180";
   const host = env.HOST || "127.0.0.1";
   if (production && demo)
     throw new Error("Demo mode is forbidden in production.");

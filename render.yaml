@@ -1,0 +1,33 @@
+# Full application: Express serves both the web build and API at one origin.
+# Free trial only. Do not apply this Blueprint to an existing service blindly.
+# Free web services sleep on idle; free PostgreSQL expires after 30 days.
+# Provision PostgreSQL first; enter its external TLS URL as a Render secret.
+services:
+  - type: web
+    name: agribridge
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/ready
+    autoDeployTrigger: checksPass
+    numInstances: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AGRIBRIDGE_DEMO
+        value: "false"
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_TLS
+        value: "true"
+      - key: DATABASE_MIGRATIONS
+        value: auto
+      # Keep the conservative default until ingress hop count is verified.
+      - key: TRUST_PROXY
+        value: "0"

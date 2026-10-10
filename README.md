@@ -85,6 +85,10 @@ The compiled application runs with `npm start`. Production additionally requires
 
 ## Before a public launch
 
+For managed full-app hosting, see [the Render deployment setup](docs/render-deployment.md)
+and `render.yaml`. This serves the web app and API together and requires a separately
+provisioned PostgreSQL database. GitHub Pages alone cannot run the full application.
+
 This repository is a working product and deployment foundation. A national rollout still needs reviewed crop content and translations, testing with Ugandan farmers on low-end phones, approved telecom services, licensed weather access, trained support teams, realistic load testing, backup restoration drills and monitored infrastructure. Connectivity is not guaranteed: SMS, USSD and WhatsApp all require an available network at delivery time.
 
 Password recovery, administrator MFA, shared rate limiting across replicas and operational privacy/security governance remain launch work. The application is **not SOC 2 certified**; code controls do not establish certification. Review Uganda data-protection obligations, retention, access approval, incident response and provider processing terms before collecting real customer information.
