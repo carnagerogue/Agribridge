@@ -1,11 +1,12 @@
 # Full application: Express serves both the web build and API at one origin.
-# This is a paid service proposal. Review costs before creating resources.
+# Free trial only. Do not apply this Blueprint to an existing service blindly.
+# Free web services sleep on idle; free PostgreSQL expires after 30 days.
 # Provision PostgreSQL first; enter its external TLS URL as a Render secret.
 services:
   - type: web
     name: agribridge
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
