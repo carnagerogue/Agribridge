@@ -14,6 +14,17 @@ test("a visitor explores the intended WhatsApp journey from the landing page", a
     name: "Explore the WhatsApp journey",
   });
   const preview = page.locator("#landing-whatsapp-preview");
+  await expect(preview.locator(".lwh-whatsapp-brand")).toContainText(
+    "WhatsApp",
+  );
+  await expect(preview.locator(".lwh-whatsapp-brand")).toContainText(
+    "Mock conversation",
+  );
+  await expect(preview.locator(".lwh-bubble")).toHaveCount(3);
+  await expect(preview).toContainText("I’m Grace at Demo Farm in Kiwoko");
+  await expect(preview.locator(".lwh-mock-note")).toContainText(
+    "no messages sent",
+  );
   await expect(preview).toContainText("Sample business profile");
   await expect(page.locator("#how-it-works")).toContainText(
     "WhatsApp connection coming soon",

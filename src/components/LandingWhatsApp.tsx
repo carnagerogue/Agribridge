@@ -9,9 +9,13 @@ import {
   Headphones,
   Leaf,
   MapPin,
-  MessageCircle,
+  Mic,
+  MoreVertical,
+  Phone,
+  Smile,
   Sprout,
 } from "lucide-react";
+import WhatsAppMark from "./WhatsAppMark";
 import "../styles/landing-whatsapp.css";
 
 const journey = [
@@ -22,7 +26,9 @@ const journey = [
     description:
       "Use your WhatsApp number and share your name, community and farm details.",
     farmer: "Hello! I’d like to register my farm.",
-    team: "Welcome! Let’s set up your farm profile. What is your farm’s name, which community are you in, and what do you grow? You’ll review your details before confirming.",
+    team: "Hello! What’s your name, where is your farm, and what do you grow?",
+    followUp:
+      "I’m Grace at Demo Farm in Kiwoko. We grow white maize on 3.5 acres.",
   },
   {
     id: "buyers",
@@ -32,6 +38,7 @@ const journey = [
       "Share your produce, quantity and harvest window. Find potential buyers.",
     farmer: "I have 600 kg of white maize, ready in two weeks.",
     team: "Here’s a potential buyer for your maize. Shall we review their quality requirements, price and collection terms before making an introduction?",
+    followUp: "Yes, please. What quality does the buyer need?",
   },
   {
     id: "information",
@@ -40,6 +47,8 @@ const journey = [
     description: "Explore prices, weather, input costs, transport and storage.",
     farmer: "What should I know before I sell my maize?",
     team: "Let’s look at the price, market and date first. We can also check the forecast, seed costs, transport and storage. Which district or market are you planning for?",
+    followUp:
+      "Kampala. Can we compare transport costs and the price of maize seed too?",
   },
   {
     id: "payments",
@@ -49,6 +58,8 @@ const journey = [
       "See the difference between approval and confirmed received funds.",
     farmer: "How will I know when my client has paid?",
     team: "You’d get an update when payment is approved, followed by a separate receipt after the provider confirms the transfer. Approval alone doesn’t mean the funds have arrived.",
+    followUp:
+      "Please send the receipt to this WhatsApp number when the transfer is confirmed.",
   },
 ] as const;
 
@@ -182,16 +193,18 @@ export function LandingWhatsApp() {
       <div className="lp-width">
         <div className="lwh-heading">
           <div>
-            <p className="lp-section-label">THE WHATSAPP JOURNEY</p>
+            <p className="lp-section-label lwh-eyebrow">
+              <WhatsAppMark size={20} /> THE WHATSAPP EXPERIENCE
+            </p>
             <h2 id="landing-whatsapp-title">
-              Your next market connection.
+              See Agribridge on
               <br />
-              <em>A message away.</em>
+              <em>WhatsApp.</em>
             </h2>
           </div>
           <p>
-            From a farmer’s first hello to a buyer conversation. A familiar way
-            to share your harvest, ask questions and follow the sale.
+            A preview of a real-world conversation: introduce your farm, find
+            buyers and ask about the market. Explore the mock chat below.
           </p>
         </div>
 
@@ -258,15 +271,23 @@ export function LandingWhatsApp() {
               role="region"
               aria-labelledby={`landing-whatsapp-step-${current.id}`}
             >
+              <div className="lwh-whatsapp-brand">
+                <WhatsAppMark size={23} />
+                <strong>WhatsApp</strong>
+                <span>Mock conversation</span>
+              </div>
               <div className="lwh-chat-header">
                 <span className="lwh-avatar">
                   <Sprout size={24} strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <div>
+                <div className="lwh-contact">
                   <strong>Agribridge</strong>
                   <span>Farmer & market support</span>
                 </div>
-                <span className="lwh-sample-tag">SAMPLE</span>
+                <div className="lwh-chat-tools" aria-hidden="true">
+                  <Phone size={17} />
+                  <MoreVertical size={19} />
+                </div>
               </div>
               <div
                 className="lwh-conversation"
@@ -274,26 +295,44 @@ export function LandingWhatsApp() {
                 aria-atomic="true"
               >
                 <span className="lwh-chat-context">
-                  Scripted conversation · {String(step + 1).padStart(2, "0")} /
-                  04
+                  Mock conversation · example{" "}
+                  {String(step + 1).padStart(2, "0")} / 04
                 </span>
                 <div className="lwh-bubble lwh-farmer">
-                  <span className="lwh-sender">Sample farmer</span>
+                  <span className="lwh-sender">You · sample farmer</span>
                   <p>{current.farmer}</p>
-                  <CheckCheck size={14} aria-hidden="true" />
+                  <span className="lwh-message-meta">
+                    <span>09:41</span>
+                    <CheckCheck size={14} aria-hidden="true" />
+                  </span>
                 </div>
                 <div className="lwh-bubble lwh-team">
-                  <span className="lwh-sender">
-                    Agribridge · experience preview
-                  </span>
+                  <span className="lwh-sender">Agribridge</span>
                   <p>{current.team}</p>
+                  <span className="lwh-message-meta">
+                    <span>09:42</span>
+                  </span>
+                </div>
+                <div className="lwh-bubble lwh-farmer">
+                  <span className="lwh-sender">You · sample farmer</span>
+                  <p>{current.followUp}</p>
+                  <span className="lwh-message-meta">
+                    <span>09:43</span>
+                    <CheckCheck size={14} aria-hidden="true" />
+                  </span>
+                </div>
+                <div className="lwh-result">
                   <SampleCard step={step} />
                 </div>
               </div>
-              <div className="lwh-chat-footer">
-                <MessageCircle size={16} aria-hidden="true" />
-                <span>Explore the full scripted conversation in the demo</span>
+              <div className="lwh-compose-preview" aria-hidden="true">
+                <span>
+                  <Smile size={19} />
+                  <span>Message</span>
+                </span>
+                <Mic size={20} />
               </div>
+              <p className="lwh-mock-note">Mock preview · no messages sent</p>
             </div>
             <p className="lwh-preview-caption">
               All conversations, businesses, buyers, prices, forecasts and

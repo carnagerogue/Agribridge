@@ -25,6 +25,7 @@ import {
 } from "../lib/landing";
 import { CinematicLandscape } from "../components/CinematicLandscape";
 import LandingWhatsApp from "../components/LandingWhatsApp";
+import WhatsAppMark from "../components/WhatsAppMark";
 import {
   useLandingMotion,
   useLandingMotionPreference,
@@ -287,6 +288,7 @@ export default function Landing() {
               </p>
               <div className="lp-hero-actions">
                 <Link className="lp-button" to="/whatsapp-demo">
+                  <WhatsAppMark size={20} />
                   Try the WhatsApp demo <ArrowUpRight size={19} />
                 </Link>
                 <a className="lp-text-link" href="#how-it-works">
