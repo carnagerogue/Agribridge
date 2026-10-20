@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowUp,
   Bot,
@@ -36,8 +36,10 @@ type Answer = {
 };
 export default function Assistant() {
   const { data, online } = useApp();
+  const [params] = useSearchParams();
+  const suggestedQuestion = (params.get("question") ?? "").slice(0, 600);
   const [status, setStatus] = useState<Status | null>(null),
-    [question, setQuestion] = useState(""),
+    [question, setQuestion] = useState(suggestedQuestion),
     [crop, setCrop] = useState(data.farms[0]?.crop ?? "Maize"),
     [district, setDistrict] = useState(data.farms[0]?.district ?? "Nakaseke"),
     [consent, setConsent] = useState(false),
@@ -45,6 +47,12 @@ export default function Assistant() {
     [error, setError] = useState(""),
     [reply, setReply] = useState<Answer | null>(null),
     [asked, setAsked] = useState("");
+  useEffect(() => {
+    if (!suggestedQuestion) return;
+    setQuestion(suggestedQuestion);
+    setConsent(false);
+    setReply(null);
+  }, [suggestedQuestion]);
   async function loadStatus() {
     try {
       setStatus(await request<Status>("/api/assistant/status"));
@@ -85,34 +93,46 @@ export default function Assistant() {
       />
       <div className="assistant-layout">
         <section className="assistant-main">
-          <div className="assistant-welcome">
-            <span className="assistant-mark">
-              <Sprout size={35} />
-            </span>
-            <h2>Let’s work it out together.</h2>
-            <p>
-              Start with one question about your farm records or daily workflow.
-            </p>
-            <div className="suggestion-list">
-              {[
-                "How do I create a farm and plan tasks?",
-                "How do I record a harvest lot?",
-                "How can I compare season costs and sales?",
-              ].map((q) => (
-                <button
-                  key={q}
-                  onClick={() => {
-                    setQuestion(q);
-                    if (q.includes("maize")) setCrop("Maize");
-                    else if (q.includes("bean")) setCrop("Beans");
-                  }}
-                >
-                  {q}
-                  <ArrowUp size={16} />
-                </button>
-              ))}
+          {suggestedQuestion && (
+            <div className="assistant-question-context">
+              <Bot size={21} aria-hidden="true" />
+              <span>
+                Your guide prepared a question below. Edit it as needed, then
+                choose whether to send it. Nothing has been sent yet.
+              </span>
             </div>
-          </div>
+          )}
+          {!suggestedQuestion && (
+            <div className="assistant-welcome">
+              <span className="assistant-mark">
+                <Sprout size={35} />
+              </span>
+              <h2>Let’s work it out together.</h2>
+              <p>
+                Start with one question about your farm records or daily
+                workflow.
+              </p>
+              <div className="suggestion-list">
+                {[
+                  "How do I create a farm and plan tasks?",
+                  "How do I record a harvest lot?",
+                  "How can I compare season costs and sales?",
+                ].map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => {
+                      setQuestion(q);
+                      if (q.includes("maize")) setCrop("Maize");
+                      else if (q.includes("bean")) setCrop("Beans");
+                    }}
+                  >
+                    {q}
+                    <ArrowUp size={16} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {error && <ErrorMessage message={error} />}{" "}
           {status && !status.configured && (
             <Notice tone="warning">
@@ -203,6 +223,7 @@ export default function Assistant() {
                   !online ||
                   !status?.configured ||
                   !consent ||
+                  status.remaining === 0 ||
                   question.trim().length < 3 ||
                   status?.availability === "billing_unavailable"
                 }

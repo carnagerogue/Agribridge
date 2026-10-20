@@ -787,7 +787,8 @@ export default function Harvest() {
   const linkedSeason = data.seasons.find(
     (season) => season.id === searchParams.get("season"),
   );
-  const [tab, setTab] = useState<"lots" | "collections">("lots");
+  const tab =
+    staff && searchParams.get("tab") === "collections" ? "collections" : "lots";
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
     [selectedId, setSelectedId] = useState("");
@@ -832,7 +833,12 @@ export default function Harvest() {
     visibleCollections.find((collection) => collection.id === selectedId) ??
     visibleCollections[0];
   function changeTab(value: "lots" | "collections") {
-    setTab(value);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value === "collections" && staff) next.set("tab", value);
+      else next.delete("tab");
+      return next;
+    });
     setFilter("all");
     setQuery("");
     setSelectedId("");

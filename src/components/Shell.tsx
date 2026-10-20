@@ -27,6 +27,7 @@ import { useApp } from "../context/AppContext";
 import { initials } from "../lib/format";
 import { AppUpdate } from "./AppUpdate";
 import { WorkspaceSearch } from "./WorkspaceSearch";
+import { WorkspaceGuide } from "./WorkspaceGuide";
 import { Skeleton, trapFocus } from "./ui";
 import {
   CORE_NAVIGATION,
@@ -389,6 +390,7 @@ export function Shell() {
         )}
         <main id="main-content" tabIndex={-1}>
           <AppUpdate />
+          <WorkspaceGuide />
           <Suspense fallback={<Skeleton />}>
             <Outlet />
           </Suspense>

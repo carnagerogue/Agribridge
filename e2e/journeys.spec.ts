@@ -251,16 +251,64 @@ test("cooperative tools stay hidden from farmers", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("an operator reviews the sample collection manifest", async ({
+test("a page guide prepares an AI question without sending it", async ({
+  page,
+  consoleErrors,
+}) => {
+  let submittedQuestions = 0;
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/assistant"
+    )
+      submittedQuestions += 1;
+  });
+  await signInAsDemo(page, "farmer");
+  await openSection(page, "Farms");
+  await page.getByRole("button", { name: "Guide me", exact: true }).click();
+  const guide = page.getByRole("dialog", { name: "Farms and daily tasks" });
+  await expect(
+    guide.getByRole("heading", { name: "Add your farm", exact: true }),
+  ).toBeVisible();
+  await guide.getByRole("link", { name: "Ask AI about this" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Your farming question" }),
+  ).toHaveValue("How do I use Agribridge to add a farm and plan daily tasks?");
+  await expect(
+    page.getByRole("checkbox", { name: /I agree to send/ }),
+  ).not.toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Ask assistant", exact: true }),
+  ).toBeDisabled();
+  expect(submittedQuestions).toBe(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("an operator follows the cooperative journey to a collection manifest", async ({
   page,
   consoleErrors,
 }) => {
   await signInAsDemo(page, "operator");
-  await openSection(page, "Harvest & collection", "More tools");
-  await page.getByRole("tab", { name: /^Buyer collections/ }).click();
+  await page
+    .getByRole("button", { name: "Cooperative journey", exact: true })
+    .click();
+  await page.getByRole("link", { name: /Prepare a collection/ }).click();
+  await expect(
+    page.getByRole("tab", { name: /^Buyer collections/ }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(
     page.getByText("Kampala maize collection · Sample").first(),
   ).toBeVisible();
+  await expect(page.getByText("AG-SAMPLE-MAIZE-001").first()).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("tab", { name: /^Buyer collections/ }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("AG-SAMPLE-MAIZE-001").first()).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

@@ -2,11 +2,24 @@
 
 These instructions describe the application, not agronomic recommendations.
 
+## Get guidance wherever you are
+
+Every signed-in section has **Guide me**, with three clear steps for that screen.
+The guide remains available without an AI request. **Ask AI about this** prepares
+a question for the assistant; review it and give consent before sending.
+No private records are copied into these questions, and opening a guide or an
+assistant link does not change records or send an AI request.
+
+Home shows a farm journey and, for cooperative staff, a cooperative journey.
+Progress means a relevant record exists in the current workspace. It does not
+verify quality, delivery or payment. Follow **Take the next step** to the tool
+you need. Cooperative tools remain restricted by account role.
+
 ## Start with a farm
 
 Open **Farms**, choose **Add a farm**, and enter the plot name, farmer name,
 district, area, crop, planting date and growth stage. Use real records. Tasks
-belong to a farm: create them from Home or Farms, set a title and due date, then
+can belong to a farm or be general: create them from Home or Farms, set a title and due date, then
 mark them complete or reopen them as work changes.
 
 ## Plan a season
@@ -17,10 +30,11 @@ they are not forecasts of market prices or guaranteed returns.
 
 ## Record harvests and collections
 
-In **Harvest & collection**, record a lot against a farm and season, including
+In **Harvest & collection**, record a lot against a farm, optionally linked to a season, including
 harvest date, weight and quality observations. Cooperative staff review lots.
 Only accepted lots can be allocated to buyer collections. A collection manifest
 records the allocation; it does not confirm a payment.
+Linked lots must fit within the season's recorded harvested weight.
 
 ## Coordinate the cooperative
 
@@ -40,6 +54,22 @@ probabilities here.
 treatment, planting rates, fertiliser or chemical decisions need qualified local
 advice. The assistant provides instructions and sourced explanations; it cannot
 create records, contact people, make payments or perform actions for you.
+
+## Learning, access and connection
+
+**Learn** provides learning resources and short field guides. Check the review
+status before relying on a guide. Draft agronomic content requires qualified
+review. Read a lesson and answer its knowledge check when available.
+
+**Settings & connection** lets you enable storage on a trusted device while
+connected. Farmers can retain essential farm records and lessons. Private
+financial, contact and cooperative records remain online. Review pending
+changes and wait for sync confirmation before clearing device data.
+
+Administrators manage accounts in **Administration** and inspect integration
+status and audit activity. At this handover, WhatsApp, SMS, USSD and automated
+voice are pending provider setup. Contact preferences and previews do not
+prove delivery. After setup, inspect message delivery status.
 
 ## Forecast configuration
 
