@@ -1,6 +1,6 @@
 # Deployment and operations
 
-The repository includes a production container and a TLS-protected PostgreSQL Compose stack. These are deployable artifacts, not a claim of a completed production rollout or SOC 2 certification. Docker was unavailable in the implementation environment, so an image build and complete Compose startup must be verified on the deployment host before release. The NodeNext server compilation was checked locally.
+The repository includes a production container and a TLS-protected PostgreSQL Compose stack. The image and isolated Compose startup were checked locally with PostgreSQL 17 and certificate-verified TLS, including the database readiness endpoint and real PostgreSQL migration tests. These checks are not a hosted production rollout. See [Render deployment](render-deployment.md) for the public WhatsApp demonstration and the operational platform Blueprints.
 
 ## Build and runtime
 

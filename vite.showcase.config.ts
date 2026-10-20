@@ -9,7 +9,11 @@ export default defineConfig({
     {
       name: "agribridge-showcase-html",
       generateBundle() {
-        this.emitFile({ type: "asset", fileName: "icon.svg", source: readFileSync(resolve("public/icon.svg")) });
+        this.emitFile({
+          type: "asset",
+          fileName: "icon.svg",
+          source: readFileSync(resolve("public/icon.svg")),
+        });
       },
     },
   ],

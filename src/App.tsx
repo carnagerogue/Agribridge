@@ -158,7 +158,9 @@ function AppEntry() {
   const location = useLocation();
   if (location.pathname === "/whatsapp-demo")
     return (
-      <Suspense fallback={<div className="initial-loading">Opening the demo…</div>}>
+      <Suspense
+        fallback={<div className="initial-loading">Opening the demo…</div>}
+      >
         <WhatsAppDemo platformHref="/welcome" />
       </Suspense>
     );

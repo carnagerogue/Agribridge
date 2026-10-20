@@ -16,7 +16,7 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 - **Community observations:** crop concerns and standing-water reports with operator review. No patient records or automatic malaria/crop diagnosis.
 - **Low-connectivity access:** an installable web app, explicitly enabled offline farm/learning storage, queued supported edits, conflict handling, and a USSD menu preview. First load and synchronization still need internet.
 - **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded replies, verified account linking and optional guided market signup/produce intake. Sender accounts/shortcodes must be provisioned; free-form WhatsApp AI and automated speech remain inactive.
-- **Farm assistant:** consented, source-grounded OpenAI answers with request budgets and safety referrals. Production requires reviewed guidance; demo answers label draft sources.
+- **Farm assistant:** consented, source-grounded OpenAI answers with request budgets and safety referrals. Workspace instructions are available immediately; production crop advice requires reviewed guidance. Demo answers label draft sources.
 
 ## Finding your way
 
@@ -92,7 +92,7 @@ This repository is a working product and deployment foundation. A national rollo
 Password recovery, administrator MFA, shared rate limiting across replicas and operational privacy/security governance remain launch work. The application is **not SOC 2 certified**; code controls do not establish certification. Review Uganda data-protection obligations, retention, access approval, incident response and provider processing terms before collecting real customer information.
 
 More detail: [API and security](server/README.md), [Uganda access research](docs/access-research.md), [season and harvest research](docs/uganda-value-workflows.md), [deployment](docs/deployment.md), [channels](docs/channels.md), [AI](docs/ai.md).
-# Render deployment and WhatsApp demonstration
+## Render deployment and WhatsApp demonstration
 
 Deploy the public WhatsApp demonstration without API keys or a database using the root `render.yaml`. The operational platform has a separate Render Blueprint at `deploy/render-platform.yaml`; it requires verified-TLS PostgreSQL, but WhatsApp can stay disabled. See [Render deployment](docs/render-deployment.md) for both paths and secure setup.
 

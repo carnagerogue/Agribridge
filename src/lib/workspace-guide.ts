@@ -161,6 +161,41 @@ export const WORKSPACE_GUIDES: WorkspaceGuide[] = [
       "How do I compare public reference prices and local price records in Agribridge?",
   },
   {
+    route: "/marketplace",
+    title: "Connect your produce with buyer demand",
+    introduction:
+      "Set up your business, list what you have and follow each agreed next step.",
+    steps: [
+      {
+        title: "Set up My business",
+        detail:
+          "Open My business and record your business details, district and crops. Keep contact information accurate and share only what you have permission to publish.",
+      },
+      {
+        title: "List My produce",
+        detail:
+          "Open My produce and choose Add produce. Record the crop, quantity, quality and harvest availability. Update or pause the listing when those details change.",
+      },
+      {
+        title: "Find a suitable buyer",
+        detail:
+          "Open Find buyers and compare requests with your crop, district, quantity and harvest dates. Offer matching produce, then confirm quality, price and collection terms with the buyer.",
+      },
+      {
+        title: "Follow Orders & updates",
+        detail:
+          "Review order requests and record acceptance, cancellation or fulfillment when it happens. An accepted order is not proof of payment. Check the displayed payment and messaging connection status before relying on updates.",
+      },
+      {
+        title: "Coordinate demand as a team",
+        detail:
+          "Cooperative staff can choose Add buyer request in Find buyers, review available produce and follow introductions. Use Harvest & collection to arrange accepted lots and a collection manifest when needed.",
+      },
+    ],
+    question:
+      "How do I use Agribridge Marketplace to set up my business, list produce, find buyers and follow orders?",
+  },
+  {
     route: "/learn",
     title: "Learn a little, use it well",
     introduction:
