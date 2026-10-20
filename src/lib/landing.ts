@@ -5,7 +5,7 @@ export const landingStory = [
     title: "Good things",
     emphasis: "grow together.",
     description:
-      "Your land. Your people. Your next step. One connected workspace for farmers and cooperatives.",
+      "Your farm. Your next buyer. Explore how a WhatsApp conversation could connect your produce to markets, with one workspace for everything that follows.",
   },
   {
     id: "harvest",

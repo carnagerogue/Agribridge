@@ -24,6 +24,7 @@ import {
   landingStory,
 } from "../lib/landing";
 import { CinematicLandscape } from "../components/CinematicLandscape";
+import LandingWhatsApp from "../components/LandingWhatsApp";
 import {
   useLandingMotion,
   useLandingMotionPreference,
@@ -31,7 +32,7 @@ import {
 import "../styles/landing.css";
 
 const navigation = [
-  { href: "#how-it-works", label: "How it works" },
+  { href: "#how-it-works", label: "WhatsApp" },
   { href: "#learning", label: "Learning" },
   { href: "#cooperatives", label: "For cooperatives" },
 ];
@@ -285,8 +286,7 @@ export default function Landing() {
                 {narrative.description}
               </p>
               <div className="lp-hero-actions">
-                {primaryAction()}
-                <Link className="lp-text-link" to="/whatsapp-demo">
+                <Link className="lp-button" to="/whatsapp-demo">
                   Try the WhatsApp demo <ArrowUpRight size={19} />
                 </Link>
                 <a className="lp-text-link" href="#how-it-works">
@@ -294,7 +294,7 @@ export default function Landing() {
                 </a>
               </div>
               <p className="lp-hero-footnote">
-                Built around the way you farm. Uganda.
+                WhatsApp experience preview. Live messaging is coming soon.
               </p>
               {entry.kind === "demo" && (
                 <p className="lp-entry-note">
@@ -341,12 +341,12 @@ export default function Landing() {
           <div className="lp-width">
             <a href="#how-it-works">
               <small>01</small>
-              <span>Plan with purpose</span>
+              <span>Start a conversation</span>
               <ArrowDown size={18} />
             </a>
-            <a href="#learning">
+            <a href="#farm-workspace">
               <small>02</small>
-              <span>Grow with clarity</span>
+              <span>Keep your farm connected</span>
               <ArrowDown size={18} />
             </a>
             <a href="#cooperatives">
@@ -356,9 +356,10 @@ export default function Landing() {
             </a>
           </div>
         </div>
+        <LandingWhatsApp />
         <section
           className="lp-journey lp-width lp-section"
-          id="how-it-works"
+          id="farm-workspace"
           aria-labelledby="journey-title"
         >
           <div className="lp-section-heading">
@@ -368,7 +369,8 @@ export default function Landing() {
               season, connected.
             </h2>
             <p>
-              Less scattered information. More clarity about what comes next.
+              Keep the wider picture in your workspace, from farm records and
+              learning to harvests and buyer coordination.
             </p>
           </div>
           <div
@@ -566,6 +568,14 @@ export default function Landing() {
               <p>
                 Weather comes from{" "}
                 <a
+                  href="https://www.met.no/en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  MET Norway
+                </a>{" "}
+                or{" "}
+                <a
                   href="https://open-meteo.com/en/docs"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -604,8 +614,11 @@ export default function Landing() {
                 <Plus size={21} />
               </summary>
               <p>
-                Your cooperative or extension officer can help you get an
-                account. If you already have one,{" "}
+                The intended WhatsApp signup starts with your phone number,
+                followed by your name, community, produce and farm details. You
+                review the profile before confirming it. While the live WhatsApp
+                connection is being prepared, your cooperative or extension
+                officer can help you get a web account. If you already have one,{" "}
                 <Link to={user ? "/" : "/login"}>
                   {user ? "open your workspace" : "sign in"}
                 </Link>
@@ -614,14 +627,43 @@ export default function Landing() {
             </details>
             <details>
               <summary>
-                Can I reach support on a basic phone?
+                Can I message Agribridge on WhatsApp now?
                 <Plus size={21} />
               </summary>
               <p>
-                WhatsApp, SMS and USSD channels need setup by your cooperative
-                and a service provider. Choosing a preferred channel does not
-                activate it. Ask your cooperative which channels are currently
-                available; this page does not provide an active support number.
+                The WhatsApp experience is in preview. You can{" "}
+                <Link to="/whatsapp-demo">try the conversation demo</Link>{" "}
+                today; this page does not provide an active support number. The
+                demo uses sample information and sends no messages. WhatsApp
+                needs an internet connection; SMS and USSD are part of the
+                longer-term direction.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Can I use a voice note or speak Luganda?
+                <Plus size={21} />
+              </summary>
+              <p>
+                The intended experience supports farmers who prefer speaking to
+                typing, with English and Luganda conversations. Voice
+                conversations are planned. Today's demo shows scripted
+                transcripts, with no microphone recording or speech recognition;
+                Luganda preview wording still needs local review.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Who buys my produce, and how would I get paid?
+                <Plus size={21} />
+              </summary>
+              <p>
+                Farmers and cooperatives sell to clients. Agribridge helps
+                introduce buyers and coordinate quantity, quality and collection
+                terms. A buyer introduction is not a confirmed sale. Clients
+                would pay sellers directly through an integrated provider, with
+                separate updates for payment approval and confirmed receipt. The
+                preview does not take payments or move money.
               </p>
             </details>
             <details>

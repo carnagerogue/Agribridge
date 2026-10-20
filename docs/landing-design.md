@@ -27,10 +27,18 @@ Browser screenshots: `.data/design-review/landing-story-harvest.png`, `landing-c
 | Downstream layout   | Open numbered feature strip, four-stage product tour, learning links, cooperative section, FAQ and closing band preserve the original section design direction.                               |
 | Motion              | Replaced the initial timed slideshow with scroll-driven transitions as explicitly requested. Forward/backward scrolling and natural exit into the next section were manually verified.        |
 
-Above-the-fold copy difference: the opening headline and core proposition remain. The user requested three additional narrative chapters, visible scene labels and scroll guidance. CTA labels remain contextual (Open workspace, Try farmer demo, or Sign in); the pause control is intentional. The concept's incidental extra eyebrow was not adopted. No fake metrics or partner endorsements were added.
+Above-the-fold copy difference: the opening headline and four photographic chapters remain. The hero now leads with the public WhatsApp conversation demo, and the header retains contextual workspace/demo/sign-in access. The pause control remains available. No fake metrics or partner endorsements were added.
+
+## WhatsApp market experience
+
+The landing page introduces the intended WhatsApp journey at `#how-it-works`. Four numbered controls change an illustrative conversation: introduce a farm, share produce and find buyers, ask for sourced information, and follow payment updates. The chat and compact business/produce/payment summaries use fictional data. The full local-only conversation demo remains available at `/whatsapp-demo`.
+
+The hero, navigation and explanatory FAQ make this a visible part of the main platform introduction. The wider farm workspace tour continues at `#farm-workspace`. The page explains the broker model, planned English/Luganda voice access, the difference between payment approval and confirmed receipt, and the current preview status. It provides no active WhatsApp number, microphone recording, message delivery or checkout.
 
 ## Validation
 
-TypeScript and production Vite build pass. All 116 frontend unit tests pass. IAB checks cover desktop 1440x1100 and phone 390x844, scrolling through the scenes, backward scrolling, sample task completion/reopening, workflow tabs, FAQ expansion, pause/resume, direct scene selection, and mobile navigation. No horizontal overflow was observed. Automated end-to-end and PostgreSQL checks are also configured in the GitHub deployment workflow.
+TypeScript and production Vite build pass. All 124 frontend unit tests pass. IAB checks cover desktop 1440x1100 and phone 390x844, scrolling through the scenes, backward scrolling, sample task completion/reopening, workflow tabs, FAQ expansion, pause/resume, direct scene selection, and mobile navigation. No horizontal overflow was observed. Automated end-to-end and PostgreSQL checks are also configured in the GitHub deployment workflow.
 
-The existing main-bundle size warning remains (about 330 kB minified / 104 kB gzip). No animation library, video dependency, database migration or paid resource was added. The implementation was visually verified against the concept and the user's subsequent changes; no known material visual mismatch remains in the inspected states.
+The existing main-bundle size warning remains (about 348 kB minified / 109 kB gzip). No animation library, video dependency, database migration or paid resource was added. The implementation was visually verified against the concept and the user's subsequent changes; no known material visual mismatch remains in the inspected states.
+
+The WhatsApp landing addition was checked in Playwright at 1440×1000 and 360×800. All four steps, keyboard activation, preview disclosures and navigation to the full conversation demo passed without page errors or horizontal overflow. Seven targeted browser journeys passed, including the cinematic motion regressions and existing WhatsApp demo flows. The Browser plugin was unavailable in this environment, so these new checks used the installed Chromium through Playwright.

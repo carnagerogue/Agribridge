@@ -39,7 +39,7 @@ describe("public landing markup", () => {
     expect(
       html.match(/id="landing-stage-(prepare|grow|harvest|sell)"/g),
     ).toHaveLength(4);
-    expect(html.match(/aria-pressed="true"/g)).toHaveLength(3);
+    expect(html).toMatch(/id="landing-stage-grow"[^>]*aria-pressed="true"/);
     expect(html).toContain("Pause animations");
     expect(html).toContain('aria-controls="landing-mobile-menu"');
     expect(html).toContain('aria-expanded="false"');
