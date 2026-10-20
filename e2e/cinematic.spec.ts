@@ -52,12 +52,13 @@ async function expectScene(page: Page, index: number) {
       { message: `${scene.label} photography should be decoded and visible` },
     )
     .toBe(true);
-  await expect(frame.locator("img")).toHaveJSProperty(
-    "currentSrc",
-    expect.stringMatching(
+  await expect
+    .poll(() =>
+      frame.locator("img").evaluate((image: HTMLImageElement) => image.currentSrc),
+    )
+    .toMatch(
       new RegExp(`/images/agribridge-${scene.image}-(640|1024|1536)\\.webp$`),
-    ),
-  );
+    );
 }
 
 /** Scroll the page as the visitor does, through the full pinned sequence. */
