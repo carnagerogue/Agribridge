@@ -95,4 +95,3 @@ More detail: [API and security](server/README.md), [Uganda access research](docs
 ## Render deployment and WhatsApp demonstration
 
 Deploy the public WhatsApp demonstration without API keys or a database using the root `render.yaml`. The operational platform has a separate Render Blueprint at `deploy/render-platform.yaml`; it requires verified-TLS PostgreSQL, but WhatsApp can stay disabled. See [Render deployment](docs/render-deployment.md) for both paths and secure setup.
-
