@@ -77,6 +77,7 @@ const SOURCE_DOMAINS = [
   "who.int",
   "mwe.go.ug",
   "open-meteo.com",
+  "api.met.no",
 ];
 let providerAvailability:
   | "unverified"
@@ -312,6 +313,20 @@ export function selectGroundingSources(
       ),
       draft: lesson.reviewStatus !== "reviewed",
     }));
+  // Product instructions are verified against the app, not agronomic advice.
+  if (
+    /\b(record|records|log|track|task|tasks|workspace|agribridge|costs|sales|harvest lot|create a farm)\b/i.test(
+      input.question,
+    )
+  )
+    sources.push({
+      id: "workspace_guide",
+      title: "Agribridge workspace guide",
+      url: "https://github.com/carnagerogue/Agribridge/blob/main/docs/workspace-guide.md",
+      content:
+        "These are application instructions only, not crop recommendations. Farms: choose Add a farm and enter plot name, farmer name, district, acreage, crop, planting date and stage. Tasks: open Farms > Tasks or Add task on Home; set a title, farm and due date; complete or reopen the task. Season planner: create a season linked to a farm, record planned and actual costs, harvest targets and sales; figures use the values entered, not predicted prices. Harvest & collection: record a lot against a farm and season, harvest date, weight and quality observations. Staff review lots; only accepted lots can be allocated to collections. Farmers & CRM is for cooperative staff to manage contacts, follow-ups and consent. Trade desk tracks deals and readiness, not payments or customs clearance. Prices shows dated WFP/HDX monthly reference prices, separate local price records and offers; reference prices are not today's buyer quotes. Community reports request a human review; they do not diagnose crops. Administrators create accounts in Administration. Never invent data, records, prices or completed actions. For treatment, planting rates, fertiliser or chemical recommendations, seek a qualified extension officer; this source does not provide that advice.",
+      draft: false,
+    });
   const weather = context.weather;
   if (
     input.district &&
@@ -397,7 +412,12 @@ export async function answerQuestion(
     );
   const now = (options.now ?? Date.now)();
   const sources = selectGroundingSources(input, context, env, now);
-  if (!sources.some((source) => source.id.startsWith("lesson_")))
+  if (
+    !sources.some(
+      (source) =>
+        source.id.startsWith("lesson_") || source.id === "workspace_guide",
+    )
+  )
     throw new AssistantError(
       503,
       "knowledge_not_reviewed",

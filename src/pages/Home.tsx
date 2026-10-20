@@ -137,10 +137,65 @@ function WorkspaceHome() {
               : "A little planning. A better growing season."}
           </p>
         </div>
-        <Button onClick={() => setEditor("task")}>
-          <Plus size={18} /> Add task
+        <Button onClick={() => setEditor(data.farms.length ? "task" : "farm")}>
+          <Plus size={18} />{" "}
+          {data.farms.length ? "Add task" : "Add your first farm"}
         </Button>
       </header>
+      {data.farms.length === 0 && (
+        <section
+          className="workspace-start"
+          aria-labelledby="workspace-start-title"
+        >
+          <div className="workspace-start-intro">
+            <span className="workspace-eyebrow">YOUR WORKSPACE IS READY</span>
+            <h2 id="workspace-start-title">
+              Every great season
+              <br />
+              starts with a first step.
+            </h2>
+            <p>
+              Bring your land, people and plans together. Start with a real
+              farm, then build a record you can trust.
+            </p>
+            <Button onClick={() => setEditor("farm")}>
+              <Plus size={18} /> Register a farm
+            </Button>
+          </div>
+          <div className="workspace-start-steps">
+            <button onClick={() => setEditor("farm")}>
+              <span>01</span>
+              <div>
+                <strong>Know your farm</strong>
+                <small>Add its crop, district and land area.</small>
+              </div>
+              <ArrowUpRight size={18} />
+            </button>
+            <Link to={staff ? "/crm" : "/learn"}>
+              <span>02</span>
+              <div>
+                <strong>
+                  {staff ? "Connect your people" : "Build your knowledge"}
+                </strong>
+                <small>
+                  {staff
+                    ? "Add farmer contacts and plan follow-ups."
+                    : "Explore field guides and learning resources."}
+                </small>
+              </div>
+              <ArrowUpRight size={18} />
+            </Link>
+            <Link to="/weather">
+              <span>03</span>
+              <div>
+                <strong>Look ahead</strong>
+                <small>Check district conditions before planning work.</small>
+              </div>
+              <ArrowUpRight size={18} />
+            </Link>
+          </div>
+        </section>
+      )}
       {queue.length > 0 && (
         <Notice tone="warning">
           {queue.length} change{queue.length === 1 ? "" : "s"} saved on this

@@ -30,7 +30,7 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: "npx tsx e2e/server.ts",
+    command: "node --import tsx e2e/server.ts",
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 60_000,

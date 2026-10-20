@@ -81,7 +81,7 @@ export default function Assistant() {
     <>
       <PageHeader
         title="Farm assistant"
-        description="Ask a practical farming question. Get a short answer with its sources."
+        description="Get help with your records and farm workflow, with sources you can check."
       />
       <div className="assistant-layout">
         <section className="assistant-main">
@@ -91,13 +91,13 @@ export default function Assistant() {
             </span>
             <h2>Let’s work it out together.</h2>
             <p>
-              Start with one question about your crop or your learning guide.
+              Start with one question about your farm records or daily workflow.
             </p>
             <div className="suggestion-list">
               {[
-                "What should I record before planting maize?",
-                "How do I describe changes in my bean leaves?",
-                "What should I compare before selling my harvest?",
+                "How do I create a farm and plan tasks?",
+                "How do I record a harvest lot?",
+                "How can I compare season costs and sales?",
               ].map((q) => (
                 <button
                   key={q}
@@ -105,7 +105,6 @@ export default function Assistant() {
                     setQuestion(q);
                     if (q.includes("maize")) setCrop("Maize");
                     else if (q.includes("bean")) setCrop("Beans");
-                    else setCrop("Coffee");
                   }}
                 >
                   {q}
@@ -222,9 +221,9 @@ export default function Assistant() {
             </div>
             <div className="panel-body">
               <p>
-                Answers use the field guides and available district forecasts.
-                They cannot confirm a crop diagnosis or replace an extension
-                officer.
+                Answers use workspace instructions, reviewed field guides and
+                available district forecasts. They cannot confirm a crop
+                diagnosis or replace an extension officer.
               </p>
               <ul className="plain-list">
                 <li>Short answers to keep data use low.</li>
@@ -257,14 +256,21 @@ export default function Assistant() {
               </Badge>
               <p className="muted">
                 {status?.configured
-                  ? "Key configured; availability depends on provider access and funding."
-                  : "Waiting for a server connection."}
+                  ? status.availability === "available"
+                    ? "OpenAI connection verified. Answers use the cost-efficient GPT-6 Luna model."
+                    : "Key configured; availability depends on provider access and funding."
+                  : status
+                    ? "AI is not connected. You can still browse field guides and request a local review."
+                    : "Checking the server connection."}
               </p>
               <small>
                 Your remaining allowance today: {status?.remaining ?? "—"}{" "}
                 requests. The whole service is capped at{" "}
                 {status?.dailyLimit ?? "—"} requests per day.
               </small>
+              <Link className="text-link" to="/learn?view=guides">
+                Browse field guides <BookOpen size={16} />
+              </Link>
             </div>
           </section>
         </aside>

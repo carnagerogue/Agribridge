@@ -171,7 +171,7 @@ export default function Weather() {
                         )}
                   </strong>
                   <small>{date(day.date)}</small>
-                  {day.rainChance > 50 ? (
+                  {(day.rainChance ?? (day.rainMm > 1 ? 100 : 0)) > 50 ? (
                     <Droplets size={28} />
                   ) : (
                     <CloudSun size={28} />
@@ -181,7 +181,7 @@ export default function Weather() {
                   </span>
                   <span className="rain-chance">
                     <Droplets size={13} />
-                    {day.rainChance}%
+                    {day.rainChance === null ? "—" : `${day.rainChance}%`}
                   </span>
                   <small>{day.rainMm.toFixed(1)} mm</small>
                 </div>
@@ -221,12 +221,27 @@ export default function Weather() {
         )
       )}
       {!forecast && <OfficialWarnings />}
+      {forecast?.periodNote && (
+        <p className="source-note">{forecast.periodNote}</p>
+      )}
       <p className="source-note">
         Forecast data:{" "}
-        <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
-          Open-Meteo
+        <a
+          href={forecast?.sourceUrl || "https://open-meteo.com/"}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {forecast?.source || "Configured forecast provider"}
         </a>
-        . Forecast probability is not a guarantee of rainfall at your farm.
+        {" · "}
+        <a
+          href="https://creativecommons.org/licenses/by/4.0/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          CC BY 4.0
+        </a>
+        . Forecasts are not a guarantee of rainfall at your farm.
       </p>
     </>
   );
