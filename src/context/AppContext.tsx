@@ -315,7 +315,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const userRef = useRef(user);
   userRef.current = user;
   const dataRef = useRef(data);
-  dataRef.current = data;
+  // Keep the snapshot source in sync before React commits a render. Offline
+  // consent can be enabled in the same turn that a bootstrap request finishes.
+  const replaceData = useCallback((next: Bootstrap) => {
+    dataRef.current = next;
+    setData(next);
+  }, []);
   // True once this session has loaded the workspace from the server. A device
   // copy must never be saved from the empty state shown while it loads.
   const loadedRef = useRef(false);
@@ -324,16 +329,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const clearInterface = useCallback(() => {
     generation.current += 1;
     userRef.current = null;
-    dataRef.current = empty;
     loadedRef.current = false;
     setCsrfToken("");
     setUser(null);
-    setData(empty);
+    replaceData(empty);
     setQueue([]);
     setOffline(false);
     setLastSync("");
     setToast("");
-  }, []);
+  }, [replaceData]);
   const lockAfterRejection = useCallback(() => {
     const current = userRef.current;
     persistAccessLock();
@@ -416,7 +420,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userRef.current = session.user;
       setCsrfToken(session.csrfToken);
       setUser(session.user);
-      setData(empty);
+      replaceData(empty);
       loadedRef.current = false;
       setQueue([]);
       setError("");
@@ -441,7 +445,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               { ...empty, ...cached.data },
               session.user,
             );
-            setData(sanitized);
+            replaceData(sanitized);
             setLastSync(cached.savedAt);
             await saveSnapshot(scope, sanitized, cached.savedAt);
             if (!isCurrent(session.user, revision)) {
@@ -459,7 +463,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
       }
     },
-    [isCurrent, clearInterface],
+    [isCurrent, clearInterface, replaceData],
   );
 
   const refresh = useCallback(async () => {
@@ -470,7 +474,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const next = await request<Bootstrap>("/api/bootstrap");
       if (!isCurrent(current, revision)) return;
       const complete = { ...empty, ...next };
-      setData(complete);
+      replaceData(complete);
       loadedRef.current = true;
       setError("");
       setLastSync(new Date().toISOString());
@@ -502,7 +506,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else {
         if (connectionFailure(failure)) {
           setOnline(false);
-          setData(safeData(dataRef.current, current));
+          replaceData(safeData(dataRef.current, current));
         }
         setError(
           failure instanceof Error ? failure.message : "Unable to refresh.",
@@ -510,7 +514,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       throw failure;
     }
-  }, [lockAfterRejection, isCurrent, notify]);
+  }, [lockAfterRejection, isCurrent, notify, replaceData]);
 
   useEffect(() => {
     let active = true;
@@ -549,7 +553,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const revision = ++generation.current;
             userRef.current = saved;
             setUser(saved);
-            setData(sanitized);
+            replaceData(sanitized);
             setOffline(true);
             setLastSync(cached.savedAt);
             setError("Showing your saved workspace. Reconnect to sync.");
@@ -569,7 +573,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [accept, isCurrent, lockAfterRejection]);
+  }, [accept, isCurrent, lockAfterRejection, replaceData]);
 
   useEffect(() => {
     if (online || locallySignedOut()) return;

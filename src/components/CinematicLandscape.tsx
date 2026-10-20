@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 import { landingStory as scenes } from "../lib/landing";
 
@@ -15,19 +21,33 @@ export function CinematicLandscape({
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState<number[]>([]);
   const [mounted, setMounted] = useState<number[]>([0]);
-  const [reduced, setReduced] = useState(false);
   const [visible, setVisible] = useState(true);
   const container = useRef<HTMLDivElement>(null);
   const picker = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
   const manualTarget = useRef(0);
-  const playing = !paused && !reduced && visible;
+  const previousPaused = useRef(paused);
+  const playing = !paused && visible;
+
+  // Changing the scroll-story height must not strand the visitor farther down
+  // the page. Keep the selected chapter in view when pausing or resuming.
+  useLayoutEffect(() => {
+    if (previousPaused.current === paused) return;
+    previousPaused.current = paused;
+    const region = story.current;
+    const hero = region?.querySelector<HTMLElement>(".lp-hero");
+    if (!region || !hero) return;
+    const range = Math.max(0, region.offsetHeight - hero.offsetHeight);
+    window.scrollTo({
+      top:
+        window.scrollY +
+        region.getBoundingClientRect().top +
+        (paused ? 0 : (range * manualTarget.current) / (scenes.length - 1)),
+      behavior: "instant",
+    });
+  }, [paused, story]);
 
   useEffect(() => {
-    const preference = matchMedia("(prefers-reduced-motion: reduce)");
-    const onPreference = () => setReduced(preference.matches);
-    onPreference();
-    preference.addEventListener("change", onPreference);
     let inView = true;
     const onVisibility = () => setVisible(inView && !document.hidden);
     const observer = new IntersectionObserver((entries) => {
@@ -40,7 +60,6 @@ export function CinematicLandscape({
     return () => {
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      preference.removeEventListener("change", onPreference);
     };
   }, []);
 
@@ -59,10 +78,9 @@ export function CinematicLandscape({
         0,
         Math.min(1, -region.getBoundingClientRect().top / range),
       );
-      const position =
-        paused || reduced
-          ? manualTarget.current
-          : progress * (scenes.length - 1);
+      const position = paused
+        ? manualTarget.current
+        : progress * (scenes.length - 1);
       const lower = Math.floor(position);
       const upper = Math.ceil(position);
       // Start the next download only once the visitor begins the scroll story.
@@ -84,7 +102,7 @@ export function CinematicLandscape({
         sum = 1;
       }
       const dominant = weights.indexOf(Math.max(...weights));
-      if (!paused && !reduced) manualTarget.current = dominant;
+      if (!paused) manualTarget.current = dominant;
       if (dominant !== activeRef.current) {
         activeRef.current = dominant;
         setActive(dominant);
@@ -112,14 +130,14 @@ export function CinematicLandscape({
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [loaded, paused, reduced, story, onSceneChange]);
+  }, [loaded, paused, story, onSceneChange]);
 
   function requestScene(index: number) {
     manualTarget.current = index;
     setMounted((current) =>
       current.includes(index) ? current : [...current, index],
     );
-    if (paused || reduced) {
+    if (paused) {
       if (loaded.includes(index)) {
         activeRef.current = index;
         setActive(index);

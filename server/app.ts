@@ -732,11 +732,11 @@ export function createApp(
             .slice(0, 3)
             .map(
               (day) =>
-                `${day.date}: ${day.min}–${day.max}C, rain chance ${day.rainChance}%, rainfall ${day.rainMm}mm`,
+                `${day.date}: ${day.min}–${day.max}C, rain chance ${day.rainChance === null ? "not provided" : `${day.rainChance}%`}, rainfall ${day.rainMm}mm. ${forecast.periodNote || ""}`,
             )
             .join("; "),
           sourceTitle: forecast.source,
-          sourceUrl: "https://open-meteo.com/",
+          sourceUrl: forecast.sourceUrl || "https://open-meteo.com/",
           fetchedAt: forecast.fetchedAt,
         };
       } catch {
@@ -929,7 +929,9 @@ export function createApp(
             status: weatherSetupProblem(env) ? "not_configured" : "configured",
             detail: weatherSetupProblem(env)
               ? `Forecasts are off: ${weatherSetupProblem(env)}. Use a licensed Open-Meteo customer endpoint (with OPEN_METEO_API_KEY) or a self-hosted Open-Meteo server.`
-              : "Open-Meteo model forecasts. Production needs a licensed or self-hosted endpoint.",
+              : env.WEATHER_PROVIDER === "met-no"
+                ? "MET Norway Locationforecast, CC BY 4.0. Cached model forecasts; availability is checked when requested."
+                : "Open-Meteo model forecasts. Production needs a licensed or self-hosted endpoint.",
           },
           {
             id: "official-warnings",

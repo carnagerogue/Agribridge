@@ -62,11 +62,7 @@
 }
 @layer base {
   :root {
-    font-family:
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #192f29;
     background: #fff;
     font-synthesis: none;
@@ -3251,9 +3247,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *:before,
-    *:after {
+    /* Landing owns its motion preference and explicit visitor opt-in. */
+    :not(.landing-page, .landing-page *),
+    :not(.landing-page, .landing-page *):before,
+    :not(.landing-page, .landing-page *):after {
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;

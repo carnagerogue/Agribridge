@@ -1181,33 +1181,13 @@ html:has(.landing-page:not(.lp-motion-paused)) {
     gap: 16px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .landing-page *,
-  .landing-page *::before,
-  .landing-page *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-  .lp-hero-image,
-  .lp-hero-copy,
-  .lp-cooperative-image,
-  .lp-reveal {
-    transform: none !important;
-    opacity: 1 !important;
-  }
-  .lp-motion-toggle {
-    display: none;
-  }
-  .lp-hero-controls {
-    justify-content: flex-end;
-  }
+.lp-motion-paused
+  :is(.lp-hero-image, .lp-hero-copy, .lp-cooperative-image, .lp-reveal) {
+  transform: none !important;
+  opacity: 1 !important;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  html:has(.landing-page) {
-    scroll-behavior: auto;
-  }
+html:has(.lp-motion-paused) {
+  scroll-behavior: auto;
 }
 /* A three-shot sequence: slow camera travel, a 2.8s dissolve, and changing light. */
 .lp-cinema {
@@ -1389,11 +1369,13 @@ html:has(.landing-page:not(.lp-motion-paused)) {
 /* The film is a scroll story, not an autoplay carousel. */
 .lp-film-story {
   position: relative;
+  height: 380vh;
   height: 380svh;
 }
 .lp-film-story .lp-hero {
   position: sticky;
   top: 0;
+  height: 100vh;
   height: 100svh;
   min-height: 700px;
 }
@@ -1425,20 +1407,10 @@ html:has(.landing-page:not(.lp-motion-paused)) {
 }
 @media (max-width: 760px) {
   .lp-film-story {
+    height: 340vh;
     height: 340svh;
   }
   .lp-film-story .lp-hero {
     min-height: 700px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .lp-film-story {
-    height: auto;
-  }
-  .lp-film-story .lp-hero {
-    position: relative;
-  }
-  .lp-scroll-instruction {
-    display: none;
   }
 }

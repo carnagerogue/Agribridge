@@ -230,6 +230,8 @@ export type Collection = Entity & {
 };
 export type Forecast = {
   source: string;
+  sourceUrl?: string;
+  periodNote?: string;
   fetchedAt: string;
   latitude: number;
   longitude: number;
@@ -238,7 +240,7 @@ export type Forecast = {
     date: string;
     min: number;
     max: number;
-    rainChance: number;
+    rainChance: number | null;
     rainMm: number;
   }[];
   advisories: { severity: string; title: string; body: string }[];

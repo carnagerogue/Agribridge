@@ -253,7 +253,7 @@ export function createChannelBridge(
           try {
             const forecast = await weather(...point);
             const day = forecast.days[0];
-            forecastText = `${decision.value}, ${day.date}: ${day.min}-${day.max}C; rain chance ${day.rainChance}%. Open-Meteo model${forecast.stale ? ", OLD FORECAST" : ""}. Check local conditions.`;
+            forecastText = `${decision.value}, ${day.date}: ${day.min}-${day.max}C; ${day.rainChance === null ? `forecast rain ${day.rainMm}mm` : `rain chance ${day.rainChance}%`}. ${forecast.source}${forecast.stale ? ", OLD FORECAST" : ""}. Check local conditions.`;
           } catch {
             /* A provider outage becomes an honest unavailable response. */
           }

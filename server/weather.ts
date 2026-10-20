@@ -1,7 +1,10 @@
 import { ApiError } from "./security.js";
 import { silentLogger, type Logger } from "./observability.js";
+import { parseMetForecast } from "./met-weather.js";
 type Weather = {
   source: string;
+  sourceUrl?: string;
+  periodNote?: string;
   fetchedAt: string;
   latitude: number;
   longitude: number;
@@ -10,7 +13,7 @@ type Weather = {
     date: string;
     min: number;
     max: number;
-    rainChance: number;
+    rainChance: number | null;
     rainMm: number;
   }[];
   advisories: { severity: string; title: string; body: string }[];
@@ -54,6 +57,7 @@ function failureReason(error: unknown) {
  * public API is for noncommercial use. Returns why the setup is unusable.
  */
 export function weatherSetupProblem(env: NodeJS.ProcessEnv) {
+  if (env.WEATHER_PROVIDER === "met-no") return undefined;
   if (env.NODE_ENV !== "production") return undefined;
   if (!env.OPEN_METEO_BASE_URL) return "OPEN_METEO_BASE_URL is not set";
   try {
@@ -70,7 +74,10 @@ export function createWeatherService(
   fetchImpl: typeof fetch = fetch,
   logger: Logger = silentLogger,
 ) {
-  const cache = new Map<string, { at: number; data: Weather }>();
+  const cache = new Map<
+    string,
+    { at: number; nextAt: number; modified?: string; data: Weather }
+  >();
   const inflight = new Map<string, Promise<Weather>>();
   const setupProblem = weatherSetupProblem(env);
   if (setupProblem)
@@ -87,11 +94,68 @@ export function createWeatherService(
     const lon = Math.round(longitude * 100) / 100;
     const key = `${lat},${lon}`;
     const previous = cache.get(key);
-    if (previous && Date.now() - previous.at < 30 * 60_000)
-      return previous.data;
+    if (previous && Date.now() < previous.nextAt) return previous.data;
     if (inflight.has(key)) return inflight.get(key)!;
     const run = (async () => {
       try {
+        if (env.WEATHER_PROVIDER === "met-no") {
+          const url = new URL(
+            "https://api.met.no/weatherapi/locationforecast/2.0/compact",
+          );
+          url.searchParams.set("lat", String(lat));
+          url.searchParams.set("lon", String(lon));
+          const response = await fetchImpl(url, {
+            signal: AbortSignal.timeout(10000),
+            headers: {
+              accept: "application/json",
+              "User-Agent":
+                "Agribridge/0.1 (https://github.com/carnagerogue/Agribridge)",
+              ...(previous?.modified
+                ? { "If-Modified-Since": previous.modified }
+                : {}),
+            },
+          });
+          if (!response.ok && !(response.status === 304 && previous))
+            throw new WeatherFailure(`http_${response.status}`);
+          const at = Date.now();
+          const expires = Date.parse(response.headers.get("expires") || "");
+          const nextAt = Math.max(
+            at + 30 * 60_000,
+            Number.isFinite(expires) ? expires : 0,
+          );
+          if (response.status === 304 && previous) {
+            cache.set(key, { ...previous, at, nextAt });
+            return previous.data;
+          }
+          const parsed = parseMetForecast(await response.json(), at);
+          if (!parsed.days.length) throw new WeatherFailure("incomplete_data");
+          const data: Weather = {
+            source: "MET Norway · model forecast · CC BY 4.0",
+            sourceUrl: "https://api.met.no/",
+            periodNote:
+              "Temperature ranges and rain totals are calculated from available forecast periods, grouped by their start date in Uganda. Today may be partial; later periods span six hours. Rain probability is not supplied.",
+            fetchedAt: new Date(at).toISOString(),
+            latitude: lat,
+            longitude: lon,
+            ...parsed,
+            stale: false,
+            advisories: [
+              {
+                severity: "info",
+                title: "Check the forecast and the field",
+                body: "Model forecasts do not confirm soil moisture, pest presence or crop disease. Check local observations and official warnings before acting.",
+              },
+            ],
+          };
+          if (cache.size >= 1000) cache.delete(cache.keys().next().value!);
+          cache.set(key, {
+            at,
+            nextAt,
+            modified: response.headers.get("last-modified") || undefined,
+            data,
+          });
+          return data;
+        }
         const url = new URL(
           env.OPEN_METEO_BASE_URL || "https://api.open-meteo.com/v1/forecast",
         );
@@ -153,6 +217,7 @@ export function createWeatherService(
           });
         const data: Weather = {
           source: "Open-Meteo · model forecast",
+          sourceUrl: "https://open-meteo.com/",
           fetchedAt: new Date().toISOString(),
           latitude: lat,
           longitude: lon,
@@ -167,7 +232,11 @@ export function createWeatherService(
           stale: false,
         };
         if (cache.size >= 1000) cache.delete(cache.keys().next().value!);
-        cache.set(key, { at: Date.now(), data });
+        cache.set(key, {
+          at: Date.now(),
+          nextAt: Date.now() + 30 * 60_000,
+          data,
+        });
         return data;
       } catch (error) {
         const stale =

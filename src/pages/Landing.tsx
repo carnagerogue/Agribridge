@@ -24,7 +24,10 @@ import {
   landingStory,
 } from "../lib/landing";
 import { CinematicLandscape } from "../components/CinematicLandscape";
-import { useLandingMotion } from "../lib/useLandingMotion";
+import {
+  useLandingMotion,
+  useLandingMotionPreference,
+} from "../lib/useLandingMotion";
 import "../styles/landing.css";
 
 const navigation = [
@@ -117,7 +120,11 @@ export default function Landing() {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
-  const [motionPaused, setMotionPaused] = useState(false);
+  const {
+    paused: motionPaused,
+    reducedByDevice,
+    toggle: toggleMotion,
+  } = useLandingMotionPreference();
   useLandingMotion(rootRef, motionPaused);
   const [menuOpen, setMenuOpen] = useState(false);
   const [stage, setStage] = useState(1);
@@ -179,7 +186,10 @@ export default function Landing() {
     setMenuOpen(false);
   }
   return (
-    <div className="landing-page" ref={rootRef}>
+    <div
+      className={`landing-page${motionPaused ? " lp-motion-paused" : ""}`}
+      ref={rootRef}
+    >
       <div className="lp-scroll-progress" aria-hidden="true" />
       <a className="skip-link" href="#landing-main">
         Skip to content
@@ -301,11 +311,20 @@ export default function Landing() {
               <button
                 className="lp-motion-toggle"
                 aria-pressed={motionPaused}
-                onClick={() => setMotionPaused((value) => !value)}
+                title={
+                  reducedByDevice
+                    ? "Your device prefers less motion. You can choose to enable the cinematic scroll story here."
+                    : undefined
+                }
+                onClick={toggleMotion}
               >
                 {motionPaused ? <Play size={15} /> : <Pause size={15} />}
                 <span>
-                  {motionPaused ? "Resume animations" : "Pause animations"}
+                  {reducedByDevice
+                    ? "Enable cinematic motion"
+                    : motionPaused
+                      ? "Resume animations"
+                      : "Pause animations"}
                 </span>
               </button>
               <a

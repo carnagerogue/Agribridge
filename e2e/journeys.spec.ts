@@ -89,6 +89,37 @@ test("a farmer completes today's task and it stays completed", async ({
   expect(consoleErrors).toEqual([]);
 });
 
+test("a farmer can save a season using the initially displayed farm", async ({
+  page,
+  consoleErrors,
+}) => {
+  await signInAsDemo(page, "farmer");
+  await openSection(page, "Season planner", "More tools");
+  await page
+    .getByRole("button", { name: "Plan a season", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Season name", exact: true })
+    .fill("Season entry check");
+  const harvestDate = new Date(Date.now() + 120 * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  await page
+    .getByLabel("Expected harvest date", { exact: true })
+    .fill(harvestDate);
+  await page
+    .getByRole("button", { name: "Create season", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Season entry check", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Season entry check", exact: true }),
+  ).toBeVisible();
+  expect(consoleErrors).toEqual([]);
+});
+
 test("a farmer's offline change waits on the phone and syncs on reconnect", async ({
   page,
 }) => {
@@ -224,16 +255,97 @@ test("cooperative tools stay hidden from farmers", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("an operator reviews the sample collection manifest", async ({
+test("a page guide prepares an AI question without sending it", async ({
+  page,
+  consoleErrors,
+}) => {
+  let submittedQuestions = 0;
+  await page.route("**/api/assistant/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        model: "test-fixture",
+        dailyLimit: 20,
+        remaining: 5,
+        availability: "available",
+      },
+    }),
+  );
+  await page.route("**/api/assistant", (route) =>
+    route.fulfill({
+      json: {
+        answer: "Test response: open Farms and choose Add a farm.",
+        sources: [],
+        model: "test-fixture",
+        usage: { inputTokens: 0, outputTokens: 0 },
+        disclaimer: "Isolated browser test response.",
+      },
+    }),
+  );
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/api/assistant"
+    )
+      submittedQuestions += 1;
+  });
+  await signInAsDemo(page, "farmer");
+  await openSection(page, "Farms");
+  await page.getByRole("button", { name: "Guide me", exact: true }).click();
+  const guide = page.getByRole("dialog", { name: "Farms and daily tasks" });
+  await expect(
+    guide.getByRole("heading", { name: "Add your farm", exact: true }),
+  ).toBeVisible();
+  await guide.getByRole("link", { name: "Ask AI about this" }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Your farming question" }),
+  ).toHaveValue("How do I use Agribridge to add a farm and plan daily tasks?");
+  await expect(
+    page.getByRole("checkbox", { name: /I agree to send/ }),
+  ).not.toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Ask assistant", exact: true }),
+  ).toBeDisabled();
+  expect(submittedQuestions).toBe(0);
+  await page.getByRole("checkbox", { name: /I agree to send/ }).check();
+  await page
+    .getByRole("button", { name: "Ask assistant", exact: true })
+    .click();
+  await expect(
+    page.getByText("Test response: open Farms and choose Add a farm.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText(/Nothing has been sent yet/)).toHaveCount(0);
+  expect(submittedQuestions).toBe(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
+  expect(consoleErrors).toEqual([]);
+});
+
+test("an operator follows the cooperative journey to a collection manifest", async ({
   page,
   consoleErrors,
 }) => {
   await signInAsDemo(page, "operator");
-  await openSection(page, "Harvest & collection", "More tools");
-  await page.getByRole("tab", { name: /^Buyer collections/ }).click();
+  await page
+    .getByRole("button", { name: "Cooperative journey", exact: true })
+    .click();
+  await page.getByRole("link", { name: /Prepare a collection/ }).click();
+  await expect(
+    page.getByRole("tab", { name: /^Buyer collections/ }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(
     page.getByText("Kampala maize collection · Sample").first(),
   ).toBeVisible();
+  await expect(page.getByText("AG-SAMPLE-MAIZE-001").first()).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("tab", { name: /^Buyer collections/ }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("AG-SAMPLE-MAIZE-001").first()).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

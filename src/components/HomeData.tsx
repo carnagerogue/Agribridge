@@ -67,7 +67,7 @@ export function HomeWeather({ district }: { district?: string }) {
               <CloudSun size={30} strokeWidth={1.5} aria-hidden="true" />
               <strong>{Math.round(forecast.current.temperature)}°C</strong>
               <span>
-                {preview.today
+                {preview.today && preview.today.rainChance !== null
                   ? `${preview.today.rainChance}% rain chance today`
                   : forecast.current.description}
               </span>
@@ -107,6 +107,7 @@ export function HomeWeather({ district }: { district?: string }) {
               {preview.today
                 ? ` Expected rain today: ${preview.today.rainMm.toFixed(1)} mm.`
                 : " No rain estimate for today in this response."}
+              {forecast.periodNote && ` ${forecast.periodNote}`}
             </p>
           </details>
         </>

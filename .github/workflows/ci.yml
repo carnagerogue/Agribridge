@@ -98,7 +98,14 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --no-fund
-      - name: Install Chromium for Playwright
-        run: npx playwright install --with-deps chromium
+      - name: Prepare browser for Playwright
+        run: |
+          browser_path="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$browser_path" ]; then
+            "$browser_path" --version
+            echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Run end-to-end journeys
         run: npm run test:e2e

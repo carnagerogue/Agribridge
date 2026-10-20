@@ -19,6 +19,7 @@ import { date, dueLabel, label, number, today } from "../lib/format";
 import { agendaTasks, type AgendaFilter } from "../lib/workspace";
 import { FarmEditor, TaskEditor } from "./Farms";
 import { HomeWeather } from "../components/HomeData";
+import { WorkspaceJourney } from "../components/WorkspaceGuide";
 import type { Task } from "../types";
 import "../styles/home-journey.css";
 
@@ -141,11 +142,12 @@ function WorkspaceHome() {
           <Link className="button button-primary" to="/marketplace">
             Find buyers <ArrowUpRight size={18} />
           </Link>
-          <Button variant="secondary" onClick={() => setEditor("task")}>
-            <Plus size={18} /> Add task
+          <Button variant="secondary" onClick={() => setEditor(data.farms.length ? "task" : "farm")}>
+            <Plus size={18} /> {data.farms.length ? "Add task" : "Add your first farm"}
           </Button>
         </div>
       </header>
+      <WorkspaceJourney />
       {queue.length > 0 && (
         <Notice tone="warning">
           {queue.length} change{queue.length === 1 ? "" : "s"} saved on this

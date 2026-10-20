@@ -12,7 +12,7 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 - **Markets and trade:** real WFP/HDX monthly market observations with per-series dates, original units and retail/wholesale distinctions; separate cooperative price records, produce offers, buyer opportunities and export-readiness checklists. Public observations are references, not live quotes. No payment settlement or customs clearance is claimed.
 - **CRM:** contacts, permission by messaging channel, follow-ups and support work queues.
 - **Learning:** curated links to existing FAO resources, plus separate short field guides, quizzes, progress and administrator editing/review history. Initial local guides are clearly marked drafts awaiting qualified agronomist review.
-- **Weather:** dated Open-Meteo model forecasts and a separate official Uganda MWE warning feed. Missing weather is shown as unavailable.
+- **Weather:** dated MET Norway or Open-Meteo model forecasts and a separate official Uganda MWE warning feed. Missing weather is shown as unavailable.
 - **Community observations:** crop concerns and standing-water reports with operator review. No patient records or automatic malaria/crop diagnosis.
 - **Low-connectivity access:** an installable web app, explicitly enabled offline farm/learning storage, queued supported edits, conflict handling, and a USSD menu preview. First load and synchronization still need internet.
 - **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded replies, verified account linking and optional guided market signup/produce intake. Sender accounts/shortcodes must be provisioned; free-form WhatsApp AI and automated speech remain inactive.
@@ -20,7 +20,7 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 
 ## Finding your way
 
-The public introduction is at `/welcome`, also shown at `/` when signed out. Sign in at `/login`. The workspace has five primary destinations: **Home, Farms, Weather, Prices and Learn**. Season planning, harvest and other specialist features remain under **More tools**; authorized staff also get **Cooperative tools**. Home offers a single next task and short paths into the main activities.
+The public introduction is at `/welcome`, also shown at `/` when signed out. Sign in at `/login`. The workspace has five primary destinations: **Home, Marketplace, Farms, Weather and Prices**. Learning, season planning, harvest and other specialist features remain under **More tools**; authorized staff also get **Cooperative tools**. Home offers a single next task and short paths into the main activities.
 
 Learn starts with **Soil & water**, **Protect crops** and **Harvest & storage**, linking to FAO's own website rather than copying its courses. Courses require a free FAO account and a connection; mobile data charges may apply, and a larger screen is recommended. The listed course downloads are for Windows computers, not offline phone lessons. A separate public fall-armyworm PDF needs no account, is about 7.2 MB and dates from 2018; it is a training reference, not current diagnostic or pesticide advice. External actions are disabled while Agribridge is offline. The **Short field guides** view retains Agribridge's local guides and progress. No FAO partnership, endorsement or course-completion synchronization is claimed.
 

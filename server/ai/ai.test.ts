@@ -166,6 +166,41 @@ test("identifiers are rejected before any request and safety referrals never use
   assert.match(chemical.answer, /cannot prescribe/);
 });
 
+test("workspace help works without promoting draft agronomy into reviewed advice", async () => {
+  const drafts = {
+    ...context,
+    lessons: [{ ...lesson, reviewStatus: "draft" as const }],
+  };
+  const result = await answerQuestion(
+    { ...question, question: "How do I record a harvest lot?" },
+    drafts,
+    {
+      env,
+      fetchImpl: async (_url, init) => {
+        const references = JSON.parse(
+          JSON.parse(String(init?.body)).input,
+        ).references;
+        assert.deepEqual(
+          references.map((item: { id: string }) => item.id),
+          ["workspace_guide"],
+        );
+        assert.match(references[0].content, /application instructions only/);
+        return mockResponse(
+          answerBody(
+            "Open Harvest & collection and record a lot against a farm and season.",
+            ["workspace_guide"],
+          ),
+        );
+      },
+    },
+  );
+  assert.equal(result.sources[0].title, "Agribridge workspace guide");
+  await assert.rejects(
+    answerQuestion(question, drafts, { env, fetchImpl: neverFetch }),
+    errorCode("knowledge_not_reviewed"),
+  );
+});
+
 test("only current district forecast and approved source domains are selected", () => {
   const weather = {
     district: "Gulu",

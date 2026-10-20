@@ -7,7 +7,8 @@ The opening follows the user's final direction: backgrounds and words progress t
 - Forest #102e23, ivory #f7f8f3, lime #d9f793; Georgia editorial headlines and native sans-serif controls.
 - Full-bleed generated agricultural photography with an intentional left-to-right dark readability overlay. Responsive WebP variants at 640, 1024 and 1536 pixels. Images are illustrative, not photographs of actual customers.
 - Scroll-driven blended image opacity, slow camera movement, changing light, staggered section reveals and responsive image crops. Motion lives outside React's per-frame rendering; React changes the narrative at chapter boundaries.
-- Reduced-motion preferences and the pause control remove the pinned scroll sequence. All scene buttons remain usable. Background animation stops outside the viewport or when the document is hidden.
+- Reduced-motion preferences and the pause control remove the pinned scroll sequence by default. A visible “Enable cinematic motion” control lets the visitor opt into the full sequence on that page, without changing device settings. All scene buttons remain usable. Background animation stops outside the viewport or when the document is hidden.
+- Standard viewport-height fallbacks keep the scroll sequence available in browsers that do not support small viewport units.
 - Only the growing image is requested initially. Later frames load when the visitor starts the story. The last available image remains visible while another loads.
 - Real HTML text, navigation and product preview controls. Sample task completion and reopening are isolated from saved farm data. Existing login, authenticated workspace access, source disclosures and offline explanations remain available.
 
