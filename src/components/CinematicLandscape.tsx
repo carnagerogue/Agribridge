@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 import { landingStory as scenes } from "../lib/landing";
 
@@ -20,7 +26,26 @@ export function CinematicLandscape({
   const picker = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
   const manualTarget = useRef(0);
+  const previousPaused = useRef(paused);
   const playing = !paused && visible;
+
+  // Changing the scroll-story height must not strand the visitor farther down
+  // the page. Keep the selected chapter in view when pausing or resuming.
+  useLayoutEffect(() => {
+    if (previousPaused.current === paused) return;
+    previousPaused.current = paused;
+    const region = story.current;
+    const hero = region?.querySelector<HTMLElement>(".lp-hero");
+    if (!region || !hero) return;
+    const range = Math.max(0, region.offsetHeight - hero.offsetHeight);
+    window.scrollTo({
+      top:
+        window.scrollY +
+        region.getBoundingClientRect().top +
+        (paused ? 0 : (range * manualTarget.current) / (scenes.length - 1)),
+      behavior: "instant",
+    });
+  }, [paused, story]);
 
   useEffect(() => {
     let inView = true;

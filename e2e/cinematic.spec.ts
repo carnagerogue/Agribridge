@@ -180,7 +180,7 @@ for (const profile of [
       await scrollToScene(page, 1);
       await scrollToScene(page, 2);
       await scrollToScene(page, 3);
-      await scrollToScene(page, 0);
+      await scrollToScene(page, 2);
 
       await pause.click();
       const resume = page.getByRole("button", {
@@ -192,9 +192,17 @@ for (const profile of [
         "position",
         "sticky",
       );
+      await expectScene(page, 2);
+      await expect(page.locator(".lp-film-story .lp-hero")).toBeInViewport({
+        ratio: 0.9,
+      });
       await resume.click();
       await expect(pause).toBeVisible();
       await expectCinematicMotion(page);
+      await expectScene(page, 2);
+      await expect(page.locator(".lp-film-story .lp-hero")).toBeInViewport({
+        ratio: 0.9,
+      });
       await scrollToScene(page, 1);
       expect(consoleErrors).toEqual([]);
     });
