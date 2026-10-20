@@ -40,7 +40,10 @@ function SeasonEditor({
 }) {
   const { data, mutate } = useApp();
   const [selectedFarm, setSelectedFarm] = useState(
-    season?.farmId ?? farmId ?? data.farms[0]?.id ?? "",
+    season?.farmId ??
+      data.farms.find((farm) => farm.id === farmId)?.id ??
+      data.farms[0]?.id ??
+      "",
   );
   const farm = data.farms.find((item) => item.id === selectedFarm);
   const [costs, setCosts] = useState<SeasonCost[]>(

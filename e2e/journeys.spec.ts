@@ -85,6 +85,37 @@ test("a farmer completes today's task and it stays completed", async ({
   expect(consoleErrors).toEqual([]);
 });
 
+test("a farmer can save a season using the initially displayed farm", async ({
+  page,
+  consoleErrors,
+}) => {
+  await signInAsDemo(page, "farmer");
+  await openSection(page, "Season planner", "More tools");
+  await page
+    .getByRole("button", { name: "Plan a season", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Season name", exact: true })
+    .fill("Season entry check");
+  const harvestDate = new Date(Date.now() + 120 * 86400000)
+    .toISOString()
+    .slice(0, 10);
+  await page
+    .getByLabel("Expected harvest date", { exact: true })
+    .fill(harvestDate);
+  await page
+    .getByRole("button", { name: "Create season", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Season entry check", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Season entry check", exact: true }),
+  ).toBeVisible();
+  expect(consoleErrors).toEqual([]);
+});
+
 test("a farmer's offline change waits on the phone and syncs on reconnect", async ({
   page,
 }) => {
