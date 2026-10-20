@@ -256,6 +256,28 @@ test("a page guide prepares an AI question without sending it", async ({
   consoleErrors,
 }) => {
   let submittedQuestions = 0;
+  await page.route("**/api/assistant/status", (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        model: "test-fixture",
+        dailyLimit: 20,
+        remaining: 5,
+        availability: "available",
+      },
+    }),
+  );
+  await page.route("**/api/assistant", (route) =>
+    route.fulfill({
+      json: {
+        answer: "Test response: open Farms and choose Add a farm.",
+        sources: [],
+        model: "test-fixture",
+        usage: { inputTokens: 0, outputTokens: 0 },
+        disclaimer: "Isolated browser test response.",
+      },
+    }),
+  );
   page.on("request", (request) => {
     if (
       request.method() === "POST" &&
@@ -281,6 +303,17 @@ test("a page guide prepares an AI question without sending it", async ({
     page.getByRole("button", { name: "Ask assistant", exact: true }),
   ).toBeDisabled();
   expect(submittedQuestions).toBe(0);
+  await page.getByRole("checkbox", { name: /I agree to send/ }).check();
+  await page
+    .getByRole("button", { name: "Ask assistant", exact: true })
+    .click();
+  await expect(
+    page.getByText("Test response: open Farms and choose Add a farm.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText(/Nothing has been sent yet/)).toHaveCount(0);
+  expect(submittedQuestions).toBe(1);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth - innerWidth,

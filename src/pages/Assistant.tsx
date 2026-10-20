@@ -93,7 +93,7 @@ export default function Assistant() {
       />
       <div className="assistant-layout">
         <section className="assistant-main">
-          {suggestedQuestion && (
+          {suggestedQuestion && !busy && !reply && !error && (
             <div className="assistant-question-context">
               <Bot size={21} aria-hidden="true" />
               <span>
