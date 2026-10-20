@@ -679,9 +679,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    :not(.landing-page, .landing-page *),
+    :not(.landing-page, .landing-page *)::before,
+    :not(.landing-page, .landing-page *)::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;

@@ -3251,9 +3251,10 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *:before,
-    *:after {
+    /* Landing owns its motion preference and explicit visitor opt-in. */
+    :not(.landing-page, .landing-page *),
+    :not(.landing-page, .landing-page *):before,
+    :not(.landing-page, .landing-page *):after {
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;

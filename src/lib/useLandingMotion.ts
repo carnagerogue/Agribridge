@@ -1,4 +1,28 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
+
+/** Respect the device preference by default, with a visible per-page opt-in. */
+export function useLandingMotionPreference() {
+  const [reduced, setReduced] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const [choice, setChoice] = useState<"system" | "play" | "pause">("system");
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(preference.matches);
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+  const reducedByDevice = reduced && choice === "system";
+  const paused = choice === "pause" || reducedByDevice;
+  return {
+    paused,
+    reducedByDevice,
+    toggle: () => setChoice(paused ? "play" : "pause"),
+  };
+}
 
 /** Scroll effects stay outside React's render loop and stop when motion is paused. */
 export function useLandingMotion(
@@ -8,12 +32,10 @@ export function useLandingMotion(
   useEffect(() => {
     const page = root.current;
     if (!page) return;
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     let cleanup = () => {};
     const configure = () => {
       cleanup();
-      page.classList.toggle("lp-motion-paused", paused || preference.matches);
-      if (paused || preference.matches) return;
+      if (paused) return;
       let frame = 0;
       const hero = page.querySelector<HTMLElement>(".lp-hero");
       const cooperative = page.querySelector<HTMLElement>(".lp-cooperative");
@@ -86,10 +108,8 @@ export function useLandingMotion(
       };
     };
     configure();
-    preference.addEventListener("change", configure);
     return () => {
       cleanup();
-      preference.removeEventListener("change", configure);
     };
   }, [root, paused]);
 }

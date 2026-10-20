@@ -15,19 +15,14 @@ export function CinematicLandscape({
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState<number[]>([]);
   const [mounted, setMounted] = useState<number[]>([0]);
-  const [reduced, setReduced] = useState(false);
   const [visible, setVisible] = useState(true);
   const container = useRef<HTMLDivElement>(null);
   const picker = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
   const manualTarget = useRef(0);
-  const playing = !paused && !reduced && visible;
+  const playing = !paused && visible;
 
   useEffect(() => {
-    const preference = matchMedia("(prefers-reduced-motion: reduce)");
-    const onPreference = () => setReduced(preference.matches);
-    onPreference();
-    preference.addEventListener("change", onPreference);
     let inView = true;
     const onVisibility = () => setVisible(inView && !document.hidden);
     const observer = new IntersectionObserver((entries) => {
@@ -40,7 +35,6 @@ export function CinematicLandscape({
     return () => {
       observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      preference.removeEventListener("change", onPreference);
     };
   }, []);
 
@@ -59,10 +53,9 @@ export function CinematicLandscape({
         0,
         Math.min(1, -region.getBoundingClientRect().top / range),
       );
-      const position =
-        paused || reduced
-          ? manualTarget.current
-          : progress * (scenes.length - 1);
+      const position = paused
+        ? manualTarget.current
+        : progress * (scenes.length - 1);
       const lower = Math.floor(position);
       const upper = Math.ceil(position);
       // Start the next download only once the visitor begins the scroll story.
@@ -84,7 +77,7 @@ export function CinematicLandscape({
         sum = 1;
       }
       const dominant = weights.indexOf(Math.max(...weights));
-      if (!paused && !reduced) manualTarget.current = dominant;
+      if (!paused) manualTarget.current = dominant;
       if (dominant !== activeRef.current) {
         activeRef.current = dominant;
         setActive(dominant);
@@ -112,14 +105,14 @@ export function CinematicLandscape({
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [loaded, paused, reduced, story, onSceneChange]);
+  }, [loaded, paused, story, onSceneChange]);
 
   function requestScene(index: number) {
     manualTarget.current = index;
     setMounted((current) =>
       current.includes(index) ? current : [...current, index],
     );
-    if (paused || reduced) {
+    if (paused) {
       if (loaded.includes(index)) {
         activeRef.current = index;
         setActive(index);
