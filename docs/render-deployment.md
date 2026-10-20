@@ -2,6 +2,12 @@
 
 WhatsApp credentials are **not required** to deploy. There are two independent deployment options. Neither enables real payments or messages.
 
+## Existing Agribridge service
+
+The existing Render URL supplied by the project owner is **https://agribridge-d435.onrender.com**. Updates for that site should use its current Render service and database. The tested release is published to the repository's `main` branch; deploying that branch makes the public WhatsApp demonstration available at `/whatsapp-demo` alongside the operational platform. Confirm that the existing service watches `main`, or select that branch and deploy the latest commit in its Render dashboard. An automatic deployment occurs only if the existing service has it enabled.
+
+The Blueprints below are for setting up services. They do not identify or update the existing Render service automatically. Live verification requires access to `agribridge-d435.onrender.com`; this cloud environment's hostname access requirement has been saved in its configuration draft.
+
 ## Public demonstration first
 
 The root `render.yaml` creates a **static site** with an interactive WhatsApp demonstration. It requires no backend, database, accounts, or API keys. Conversations and sample records exist only in the visitor's browser memory; reset or reload clears them. It does not create a real farmer account, contact a buyer, retrieve live prices or weather, record audio, or transfer money. Luganda copy is a preview awaiting local review.
