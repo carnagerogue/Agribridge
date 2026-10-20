@@ -11,6 +11,15 @@ import { audit, insertEntity } from "./store.js";
 import { selectRecords, updateRecord } from "./records.js";
 import { createWeatherService } from "./weather.js";
 import {
+  enqueueMarketConversation,
+  applyMarketConversationDelivery,
+} from "./market-conversation.js";
+import {
+  consumeMarketChannelLink,
+  stopMarketPaymentNotifications,
+  applyMarketNotificationDelivery,
+} from "./market-notifications.js";
+import {
   persistWhatsAppInbound,
   applyWhatsAppDelivery,
   stopWhatsAppSupport,
@@ -82,6 +91,7 @@ export function createChannelBridge(
     occurredAt = new Date().toISOString(),
   ) {
     await stopWhatsAppSupport(tx, tenant, phone, occurredAt);
+    await stopMarketPaymentNotifications(tx, tenant, phone, occurredAt);
     // A delayed STOP must not override permission recorded after it.
     await tx.query(
       `UPDATE contacts SET consent=false,consent_channels='{}',consent_withdrawn_at=$3::timestamptz,version=version+1,updated_at=now() WHERE tenant_id=$1 AND phone=$2 AND COALESCE(consent_recorded_at,'epoch')<=$3::timestamptz AND COALESCE(consent_withdrawn_at,'epoch')<=$3::timestamptz`,
@@ -123,8 +133,12 @@ export function createChannelBridge(
     async handleInbound(event) {
       const tenant = scope();
       await once(`${tenant}:${event.provider}`, event.eventId, async (tx) => {
-        if (event.channel === "whatsapp")
+        let managed = false;
+        if (event.channel === "whatsapp") {
+          if (await consumeMarketChannelLink(tx, tenant, event, env)) return;
           await persistWhatsAppInbound(tx, tenant, event);
+          managed = await enqueueMarketConversation(tx, tenant, event, env);
+        }
         if (event.command === "stop") {
           await optOut(tx, tenant, event.from, event.occurredAt);
           return;
@@ -148,14 +162,20 @@ export function createChannelBridge(
             },
           );
         }
-        await supportTask(
-          tx,
-          tenant,
-          event.from,
-          event.command,
-          event.channel,
-          event.eventId,
-        );
+        if (
+          !managed ||
+          event.command === "start" ||
+          event.contentType === "unsupported" ||
+          /^(human|person|staff|omuntu)$/i.test(event.body.trim())
+        )
+          await supportTask(
+            tx,
+            tenant,
+            event.from,
+            event.command,
+            event.channel,
+            event.eventId,
+          );
         await audit(
           tx,
           actor(tenant),
@@ -173,6 +193,8 @@ export function createChannelBridge(
           [tenant, event.providerId, event.status, event.occurredAt],
         );
         await applyWhatsAppDelivery(tx, tenant, event);
+        await applyMarketNotificationDelivery(tx, tenant, event);
+        await applyMarketConversationDelivery(tx, tenant, event);
         const rows = await selectRecords(
           tx,
           "messages",

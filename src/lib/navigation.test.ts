@@ -11,17 +11,17 @@ describe("simple navigation", () => {
   it("keeps exactly the same five core destinations for every role", () => {
     expect(CORE_NAVIGATION.map((item) => item.label)).toEqual([
       "Home",
+      "Marketplace",
       "Farms",
       "Weather",
       "Prices",
-      "Learn",
     ]);
     expect(CORE_NAVIGATION.map((item) => item.to)).toEqual([
       "/",
+      "/marketplace",
       "/farms",
       "/weather",
       "/markets",
-      "/learn",
     ]);
     for (const role of ["farmer", "operator", "admin"] as const) {
       expect(navigationFor(role).core).toEqual(CORE_NAVIGATION);
@@ -29,6 +29,7 @@ describe("simple navigation", () => {
   });
   it("keeps advanced farm routes separate from the primary choices", () => {
     expect(navigationFor("farmer").more.map((item) => item.to)).toEqual([
+      "/learn",
       "/seasons",
       "/harvest",
       "/community",

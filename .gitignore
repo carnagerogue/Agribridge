@@ -18,3 +18,4 @@ backups/
 *.p12
 *.pfx
 playwright-report/
+dist-showcase/

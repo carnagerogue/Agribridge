@@ -418,12 +418,33 @@ export function mountWhatsApp(
             env,
             user,
           );
+          const automated = await tx.query(
+            `SELECT 1 FROM market_conversation_jobs WHERE tenant_id=$1 AND phone=$2 AND status IN ('sending','uncertain')
+             UNION ALL SELECT 1 FROM market_notification_deliveries WHERE tenant_id=$1 AND phone=$2 AND status IN ('sending','uncertain') LIMIT 1`,
+            [tenant, incoming.from_number],
+          );
+          if (automated.rows.length)
+            throw new ApiError(
+              409,
+              "WHATSAPP_REPLY_BLOCKED",
+              "An automated reply has an unresolved delivery outcome. Reconcile it before sending another message.",
+            );
           if (!state.canReply)
             throw new ApiError(
               409,
               "WHATSAPP_REPLY_BLOCKED",
               `Reply unavailable: ${state.replyBlockedReason}. A new direct support request may be needed.`,
             );
+          // A staff reply explicitly takes over the conversation. Keep queued
+          // automation from replying over a person once this reservation commits.
+          await tx.query(
+            "UPDATE market_channel_threads SET paused=true,updated_at=now() WHERE tenant_id=$1 AND phone=$2",
+            [tenant, incoming.from_number],
+          );
+          await tx.query(
+            "UPDATE market_conversation_jobs SET status='cancelled',error_code='staff_takeover',lease_token=NULL,lease_until=NULL,updated_at=now() WHERE tenant_id=$1 AND phone=$2 AND status IN ('queued','preparing','ready')",
+            [tenant, incoming.from_number],
+          );
           const now = new Date();
           const replyId = randomUUID();
           const { rows } = await tx.query<ReplyRow>(

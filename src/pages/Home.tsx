@@ -137,9 +137,14 @@ function WorkspaceHome() {
               : "A little planning. A better growing season."}
           </p>
         </div>
-        <Button onClick={() => setEditor("task")}>
-          <Plus size={18} /> Add task
-        </Button>
+        <div className="page-heading-actions">
+          <Link className="button button-primary" to="/marketplace">
+            Find buyers <ArrowUpRight size={18} />
+          </Link>
+          <Button variant="secondary" onClick={() => setEditor("task")}>
+            <Plus size={18} /> Add task
+          </Button>
+        </div>
       </header>
       {queue.length > 0 && (
         <Notice tone="warning">

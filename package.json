@@ -23,7 +23,8 @@
     "test:server": "tsx --test server/tests/*.test.ts server/channels/*.test.ts server/ai/*.test.ts",
     "test:e2e": "npm run build && playwright test",
     "admin:create": "tsx server/bootstrap-admin.ts",
-    "db:migrate": "tsx server/migrate.ts"
+    "db:migrate": "tsx server/migrate.ts",
+    "build:showcase": "tsc --noEmit && vite build --config vite.showcase.config.ts && node deploy/finalize-showcase.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.14",

@@ -72,6 +72,19 @@ import { assistantBudget } from "./ai-budget.js";
 import { reserveMessageBudget } from "./messaging-budget.js";
 import { mountWhatsApp } from "./whatsapp.js";
 import { createMarketDataService, mountMarketData } from "./market-data.js";
+import { mountMarketplace } from "./marketplace.js";
+import { createMarketDesk, mountMarketDesk } from "./market-intelligence.js";
+import { mountMarketOrders } from "./market-orders.js";
+import {
+  mountMarketPayments,
+  mountMarketPaymentWebhook,
+} from "./market-payments.js";
+import { mountMarketNotifications } from "./market-notifications.js";
+import {
+  listMarketChannelRegistrations,
+  listMarketChannelSupply,
+  marketConversationStatus,
+} from "./market-conversation.js";
 import {
   prepareWorkflow,
   allocateCollection,
@@ -119,6 +132,7 @@ export function createApp(
     "/api/channels",
     createChannelRouter({ handlers: createChannelBridge(db, env), env }),
   );
+  mountMarketPaymentWebhook(app, db, env);
   app.use(express.json({ limit: "32kb" }));
   app.use("/api", originGuard(config));
   app.use(
@@ -365,6 +379,66 @@ export function createApp(
   });
   mountWhatsApp(app, db, config, env, dependencies.whatsappFetch);
   mountMarketData(app, marketData);
+  mountMarketplace(app, db, config, env);
+  mountMarketDesk(app, createMarketDesk(db, env, { marketData }), config);
+  mountMarketOrders(app, db, config);
+  mountMarketPayments(app, db, config, env);
+  mountMarketNotifications(app, db, config, env);
+  app.get(
+    "/api/marketplace/channel-registrations",
+    requireOperator,
+    async (req: AuthRequest, res) => {
+      const tenant = req.user!.organizationId;
+      const [registrations, supply, status] = await Promise.all([
+        listMarketChannelRegistrations(db, tenant),
+        listMarketChannelSupply(db, tenant),
+        marketConversationStatus(db, tenant),
+      ]);
+      res.json({ registrations, supply, status });
+    },
+  );
+  app.patch(
+    "/api/marketplace/channel-supply/:id",
+    requireOperator,
+    async (req: AuthRequest, res) => {
+      const input = z
+        .object({
+          expectedStatus: z.enum(["submitted", "acknowledged"]),
+          status: z.enum(["acknowledged", "closed"]),
+        })
+        .strict()
+        .parse(req.body);
+      const result = await mutate(db, req, async (tx) => {
+        const {
+          rows: [current],
+        } = await tx.query<{ id: string; status: string }>(
+          "SELECT id,status FROM market_channel_supply WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+          [req.user!.organizationId, req.params.id],
+        );
+        if (!current)
+          throw new ApiError(404, "NOT_FOUND", "Produce inquiry not found.");
+        if (current.status !== input.expectedStatus)
+          throw new ApiError(
+            409,
+            "VERSION_CONFLICT",
+            "This inquiry changed. Refresh before updating it.",
+          );
+        await tx.query(
+          "UPDATE market_channel_supply SET status=$3 WHERE tenant_id=$1 AND id=$2",
+          [req.user!.organizationId, current.id, input.status],
+        );
+        await audit(
+          tx,
+          req.user!,
+          `market.channel_supply_${input.status}`,
+          "market_channel_supply",
+          current.id,
+        );
+        return { status: 200, body: { id: current.id, status: input.status } };
+      });
+      res.status(result.status).json(result.body);
+    },
+  );
   for (const [type, schema] of Object.entries(schemas) as [
     EntityType,
     (typeof schemas)[EntityType],

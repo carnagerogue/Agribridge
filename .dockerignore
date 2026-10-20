@@ -3,6 +3,7 @@
 node_modules
 dist
 dist-server
+dist-showcase
 .env
 .env.*
 !.env.example

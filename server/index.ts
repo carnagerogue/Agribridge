@@ -5,6 +5,9 @@ import { seedDemo } from "./seed.js";
 import { createApp } from "./app.js";
 import { mountWebApp } from "./web.js";
 import { createLogger, errorFields } from "./observability.js";
+import { createMarketDesk } from "./market-intelligence.js";
+import { drainMarketConversationJobs } from "./market-conversation-worker.js";
+import { drainMarketPaymentNotifications } from "./market-notifications.js";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 const logger = createLogger();
@@ -37,12 +40,46 @@ const server = app.listen(config.port, config.host, () =>
   }),
 );
 let closing = false;
+let marketPulse: Promise<void> | undefined;
+const marketDesk = createMarketDesk(db);
+const marketWorkerTimer =
+  process.env.MARKET_WHATSAPP_ENABLED === "true" ||
+  process.env.MARKET_PAYMENT_NOTIFICATIONS_ENABLED === "true"
+    ? setInterval(() => {
+        if (closing || marketPulse) return;
+        marketPulse = (async () => {
+          await drainMarketConversationJobs(db, process.env, {
+            limit: 10,
+            retrieve: async (question, context) => {
+              const answer = await marketDesk.answer(
+                {
+                  question: `${question.kind} ${question.query}`.slice(0, 600),
+                  crop: question.crop,
+                  district: question.district,
+                },
+                { organizationId: context.tenantId },
+              );
+              return answer.answer;
+            },
+          });
+          await drainMarketPaymentNotifications(db, process.env, { limit: 10 });
+        })()
+          .catch((error) =>
+            logger.error("market.worker_failed", errorFields(error)),
+          )
+          .finally(() => {
+            marketPulse = undefined;
+          });
+      }, 5000).unref()
+    : undefined;
 const shutdown = () => {
   if (closing) return;
   closing = true;
+  if (marketWorkerTimer) clearInterval(marketWorkerTimer);
   logger.info("server.stopping");
   server.close(() => {
-    db.close()
+    Promise.resolve(marketPulse)
+      .then(() => db.close())
       .then(() => process.exit(0))
       .catch(() => process.exit(1));
   });

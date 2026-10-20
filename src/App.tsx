@@ -22,6 +22,8 @@ const LessonReader = lazy(() =>
 );
 const Weather = lazy(() => import("./pages/Weather"));
 const Markets = lazy(() => import("./pages/Markets"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const WhatsAppDemo = lazy(() => import("./pages/WhatsAppDemo"));
 const Community = lazy(() => import("./pages/Community"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Trade = lazy(() => import("./pages/Trade"));
@@ -96,6 +98,7 @@ function Application() {
         <Route path="harvest" element={<Harvest />} />
         <Route path="weather" element={<Weather />} />
         <Route path="markets" element={<Markets />} />
+        <Route path="marketplace" element={<Marketplace />} />
         <Route path="learn" element={<Learn />} />
         <Route path="learn/:id" element={<LessonReader />} />
         <Route path="community" element={<Community />} />
@@ -151,13 +154,26 @@ function Application() {
     </Routes>
   );
 }
+function AppEntry() {
+  const location = useLocation();
+  if (location.pathname === "/whatsapp-demo")
+    return (
+      <Suspense fallback={<div className="initial-loading">Opening the demo…</div>}>
+        <WhatsAppDemo platformHref="/welcome" />
+      </Suspense>
+    );
+  return (
+    <AppProvider>
+      <Application />
+    </AppProvider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <AppProvider>
-          <Application />
-        </AppProvider>
+        <AppEntry />
       </BrowserRouter>
     </ErrorBoundary>
   );

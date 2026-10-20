@@ -16,7 +16,7 @@ services:
       - postgres_server_key
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-agribridge.sh:ro
+      - ./deploy/postgres-init.sh:/run/agribridge/postgres-init.sh:ro
       - ./deploy/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m
@@ -25,10 +25,12 @@ services:
     command:
       - |
         install -d -m 700 -o postgres -g postgres /tmp/postgres-bootstrap
+        install -m 644 -o postgres -g postgres /etc/postgresql/pg_hba.conf /tmp/postgres-bootstrap/pg_hba.conf
+        install -m 644 -o postgres -g postgres /run/agribridge/postgres-init.sh /docker-entrypoint-initdb.d/10-agribridge.sh
         install -m 600 -o postgres -g postgres /run/secrets/postgres_server_key /tmp/postgres-bootstrap/server.key
         install -m 644 -o postgres -g postgres /run/secrets/postgres_server_certificate /tmp/postgres-bootstrap/server.crt
         install -m 600 -o postgres -g postgres /run/secrets/postgres_app_password /tmp/postgres-bootstrap/app-password
-        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_min_protocol_version=TLSv1.2 -c ssl_cert_file=/tmp/postgres-bootstrap/server.crt -c ssl_key_file=/tmp/postgres-bootstrap/server.key -c hba_file=/etc/postgresql/pg_hba.conf
+        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_min_protocol_version=TLSv1.2 -c ssl_cert_file=/tmp/postgres-bootstrap/server.crt -c ssl_key_file=/tmp/postgres-bootstrap/server.key -c hba_file=/tmp/postgres-bootstrap/pg_hba.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d agribridge"]
       interval: 10s

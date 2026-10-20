@@ -1,6 +1,7 @@
 import type { Database } from "./db.js";
 import { persistWhatsAppInbound } from "./whatsapp.js";
 import { insertRecord } from "./records.js";
+import { seedMarketplace } from "./marketplace-seed.js";
 export const DEMO_TENANT = "org-demo-nakaseke";
 export const DEMO_USERS = {
   farmer: "user-demo-grace",
@@ -531,4 +532,5 @@ export async function seedDemo(db: Database) {
       );
     }
   });
+  await seedMarketplace(db);
 }

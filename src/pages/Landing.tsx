@@ -276,6 +276,9 @@ export default function Landing() {
               </p>
               <div className="lp-hero-actions">
                 {primaryAction()}
+                <Link className="lp-text-link" to="/whatsapp-demo">
+                  Try the WhatsApp demo <ArrowUpRight size={19} />
+                </Link>
                 <a className="lp-text-link" href="#how-it-works">
                   See how it works <ArrowRight size={19} />
                 </a>

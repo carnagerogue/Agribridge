@@ -44,6 +44,7 @@ const icons: Record<NavigationIcon, typeof House> = {
   farm: Sprout,
   weather: CloudSun,
   prices: ChartNoAxesCombined,
+  marketplace: Package,
   learn: BookOpen,
   season: CalendarDays,
   harvest: PackageCheck,

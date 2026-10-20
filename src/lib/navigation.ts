@@ -5,6 +5,7 @@ export type NavigationIcon =
   | "farm"
   | "weather"
   | "prices"
+  | "marketplace"
   | "learn"
   | "season"
   | "harvest"
@@ -23,12 +24,13 @@ export type NavigationGroup = "more" | "cooperative" | null;
 
 export const CORE_NAVIGATION: readonly NavigationItem[] = [
   { to: "/", label: "Home", icon: "home" },
+  { to: "/marketplace", label: "Marketplace", icon: "marketplace" },
   { to: "/farms", label: "Farms", icon: "farm" },
   { to: "/weather", label: "Weather", icon: "weather" },
   { to: "/markets", label: "Prices", icon: "prices" },
-  { to: "/learn", label: "Learn", icon: "learn" },
 ];
 const MORE_NAVIGATION: readonly NavigationItem[] = [
+  { to: "/learn", label: "Learn", icon: "learn" },
   { to: "/seasons", label: "Season planner", icon: "season" },
   { to: "/harvest", label: "Harvest & collection", icon: "harvest" },
   { to: "/community", label: "Community reports", icon: "community" },

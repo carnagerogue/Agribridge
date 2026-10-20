@@ -4,6 +4,8 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 
 ## What works
 
+- **Market workspace:** business profiles, produce/harvest availability, organization buyer requests, explainable matches, broker introductions, sourced input/transport/storage quotes, and order requests with atomic quantity commitments. The authenticated community catalog keeps private profiles separate. Payment events and verified WhatsApp notification delivery are implemented; real checkout still needs a direct-to-seller provider. See [market workspace and activation](docs/market-workspace.md).
+
 - **Farm operations:** farm profiles, crop stages, dated tasks and conflict-aware updates.
 - **Season planning:** household harvest reserves, user-entered costs, break-even estimates, a downside scenario, actual expenditure and sale/receipt records. Cash estimates are not guaranteed profit or verified payments.
 - **Harvest coordination:** farm-linked lots, recorded quality reviews, buyer collections, atomic whole-lot allocation and historical manifests. Internal acceptance is not certification.
@@ -13,7 +15,7 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 - **Weather:** dated Open-Meteo model forecasts and a separate official Uganda MWE warning feed. Missing weather is shown as unavailable.
 - **Community observations:** crop concerns and standing-water reports with operator review. No patient records or automatic malaria/crop diagnosis.
 - **Low-connectivity access:** an installable web app, explicitly enabled offline farm/learning storage, queued supported edits, conflict handling, and a USSD menu preview. First load and synchronization still need internet.
-- **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded free-text replies, and a farmer-facing business connection panel. Sender accounts/shortcodes must be provisioned; no autonomous WhatsApp AI replies are active.
+- **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded replies, verified account linking and optional guided market signup/produce intake. Sender accounts/shortcodes must be provisioned; free-form WhatsApp AI and automated speech remain inactive.
 - **Farm assistant:** consented, source-grounded OpenAI answers with request budgets and safety referrals. Production requires reviewed guidance; demo answers label draft sources.
 
 ## Finding your way
@@ -90,3 +92,7 @@ This repository is a working product and deployment foundation. A national rollo
 Password recovery, administrator MFA, shared rate limiting across replicas and operational privacy/security governance remain launch work. The application is **not SOC 2 certified**; code controls do not establish certification. Review Uganda data-protection obligations, retention, access approval, incident response and provider processing terms before collecting real customer information.
 
 More detail: [API and security](server/README.md), [Uganda access research](docs/access-research.md), [season and harvest research](docs/uganda-value-workflows.md), [deployment](docs/deployment.md), [channels](docs/channels.md), [AI](docs/ai.md).
+# Render deployment and WhatsApp demonstration
+
+Deploy the public WhatsApp demonstration without API keys or a database using the root `render.yaml`. The operational platform has a separate Render Blueprint at `deploy/render-platform.yaml`; it requires verified-TLS PostgreSQL, but WhatsApp can stay disabled. See [Render deployment](docs/render-deployment.md) for both paths and secure setup.
+

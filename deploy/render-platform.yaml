@@ -1,0 +1,36 @@
+# Operational platform. A Render web service with a separately provisioned,
+# certificate-verified TLS PostgreSQL database; no WhatsApp keys required.
+# Select this Blueprint path in Render. Review current paid plan pricing first.
+services:
+  - type: web
+    name: agribridge
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/ready
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AGRIBRIDGE_DEMO
+        value: "false"
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_TLS
+        value: "true"
+      - key: DATABASE_MIGRATIONS
+        value: auto
+      - key: TRUST_PROXY
+        value: "0"
+      - key: MARKET_WHATSAPP_ENABLED
+        value: "false"
+      - key: MARKET_LUGANDA_REVIEWED
+        value: "false"
+      - key: MARKET_PAYMENT_EVENTS_ENABLED
+        value: "false"
+      - key: MARKET_PAYMENT_NOTIFICATIONS_ENABLED
+        value: "false"

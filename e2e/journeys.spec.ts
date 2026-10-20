@@ -60,6 +60,10 @@ test("the public introduction is light, fits a small phone and leads to sign-in"
     .getByRole("link", { name: /sign in/i })
     .first()
     .click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(
+    page.getByRole("heading", { name: "Welcome to Agribridge.", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Try farmer demo" }),
   ).toBeVisible();
