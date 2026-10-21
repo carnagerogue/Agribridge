@@ -6,7 +6,10 @@ import { createApp } from "./app.js";
 import { mountWebApp } from "./web.js";
 import { createLogger, errorFields } from "./observability.js";
 import { createMarketDesk } from "./market-intelligence.js";
-import { drainMarketConversationJobs } from "./market-conversation-worker.js";
+import {
+  drainMarketConversationJobs,
+  retrieveMarketConversationInformation,
+} from "./market-conversation-worker.js";
 import { drainMarketPaymentNotifications } from "./market-notifications.js";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
@@ -51,6 +54,12 @@ const marketWorkerTimer =
           await drainMarketConversationJobs(db, process.env, {
             limit: 10,
             retrieve: async (question, context) => {
+              if (question.kind === "produce")
+                return retrieveMarketConversationInformation(
+                  db,
+                  question,
+                  context,
+                );
               const answer = await marketDesk.answer(
                 {
                   question: `${question.kind} ${question.query}`.slice(0, 600),

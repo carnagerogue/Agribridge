@@ -21,6 +21,7 @@ export type MarketProfile = MarketRecord & {
 
 export type SupplyListing = MarketRecord & {
   profileId: string;
+  published?: boolean;
   sellerName?: string;
   crop: string;
   variety: string;

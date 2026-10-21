@@ -20,10 +20,35 @@ export type MarketConversationState =
   | "supply_until"
   | "supply_confirm";
 export type MarketInformationRequest = {
-  kind: "buyers" | "inputs" | "transport" | "storage" | "prices" | "weather";
+  kind:
+    | "buyers"
+    | "produce"
+    | "inputs"
+    | "transport"
+    | "storage"
+    | "prices"
+    | "weather";
   query: string;
   crop?: string;
   district?: string;
+  minimumQuantityKg?: number;
+};
+/** Private, consented channel inquiry. It grants no web-account or purchasing authority. */
+export type MarketBuyerInquiry = {
+  id: string;
+  eventId: string;
+  phone: string;
+  buyerName: string;
+  businessName: string;
+  district: string;
+  crop: string;
+  variety: string;
+  quantityKg: number;
+  grade: string;
+  needBy: string;
+  status: "submitted" | "acknowledged" | "closed";
+  confirmedAt: string;
+  createdAt: string;
 };
 export type MarketChannelProfile = {
   id: string;
@@ -123,8 +148,8 @@ const consentPrompt = (language: MarketConversationLanguage) =>
 export const marketMenu = (language: MarketConversationLanguage = "en") =>
   choose(
     language,
-    "Agribridge's automated market assistant. A person can help: HUMAN.\nREGISTER: business signup\nSELL: tell buyers about your produce\nBUYERS crop: active buyer requests\nPRICES crop district\nINPUTS item district\nTRANSPORT or STORAGE district\nWEATHER district\nLANGUAGE: English/Luganda\nSTOP: stop automation. Voice notes need a team member; automated speech is not active.",
-    "Agribridge: omuyambi w'akatale. HUMAN: omuntu akuyambe.\nREGISTER: wewandiise\nSELL: tegeeza abaguzi ku birime byo\nBUYERS: abaguzi\nPRICES: emiwendo\nINPUTS: eby'okulima\nTRANSPORT: entambula\nSTORAGE: okutereka\nWEATHER: embeera y'obudde\nSTOP: komya obubaka. Obubaka bw'eddoboozi bwetaaga omuntu.",
+    "Agribridge's automated market assistant. A person can help: HUMAN.\nREGISTER: farmer business signup\nSELL: tell buyers about your produce\nBUY: register a purchasing inquiry\nBROWSE crop: public produce offers\nBUYERS crop: active buyer requests for farmers\nPRICES crop district\nINPUTS item district\nTRANSPORT or STORAGE district\nWEATHER district\nLANGUAGE: English/Luganda\nSTOP: stop automation. Voice notes need a team member; automated speech is not active.",
+    "Agribridge: omuyambi w'akatale. HUMAN: omuntu akuyambe.\nREGISTER: wewandiise ng'omulimi\nSELL: tegeeza abaguzi ku birime byo\nBUY: saba ebirime by'oyagala okugula\nBROWSE: laba ebirime ebitundibwa\nBUYERS: abaguzi\nPRICES: emiwendo\nINPUTS: eby'okulima\nTRANSPORT: entambula\nSTORAGE: okutereka\nWEATHER: embeera y'obudde\nSTOP: komya obubaka. Obubaka bw'eddoboozi bwetaaga omuntu.",
   );
 
 /** Call only inside a transaction deduplicating an authenticated provider callback. */
@@ -185,9 +210,10 @@ export async function enqueueMarketConversation(
   const handoff =
     /^(human|person|staff|omuntu)$/.test(body) ||
     event.contentType === "unsupported";
-  const resume = /^(menu|help|resume|register|signup|sign up|restart)$/.test(
-    body,
-  );
+  const resume =
+    /^(menu|help|resume|register|signup|sign up|restart|buy|buyer|purchase|browse)$/.test(
+      body,
+    );
   await tx.query(
     `UPDATE market_channel_threads SET last_event_at=$3,last_event_id=$4,updated_at=$5,version=version+1 WHERE tenant_id=$1 AND phone=$2`,
     [
@@ -320,6 +346,36 @@ export async function listMarketChannelSupply(
   }));
   return { items, limit: size, offset: start, hasMore: rows.length > size };
 }
+/** Private team intake; never expose this projection through a buyer catalogue. */
+export async function listMarketBuyerInquiries(
+  db: Queryable,
+  tenantId: string,
+  limit = 50,
+  offset = 0,
+) {
+  const [size, start] = page(limit, offset);
+  const { rows } = await db.query<any>(
+    `SELECT * FROM market_buyer_inquiries WHERE tenant_id=$1 ORDER BY created_at DESC,id LIMIT $2 OFFSET $3`,
+    [tenantId, size + 1, start],
+  );
+  const items: MarketBuyerInquiry[] = rows.slice(0, size).map((row) => ({
+    id: row.id,
+    eventId: row.event_id,
+    phone: row.phone,
+    buyerName: row.buyer_name,
+    businessName: row.business_name,
+    district: row.district,
+    crop: row.crop,
+    variety: row.variety,
+    quantityKg: Number(row.quantity_kg),
+    grade: row.grade,
+    needBy: dateOnly(row.need_by),
+    status: row.status,
+    confirmedAt: iso(row.confirmed_at),
+    createdAt: iso(row.created_at),
+  }));
+  return { items, limit: size, offset: start, hasMore: rows.length > size };
+}
 export async function marketConversationStatus(
   db: Queryable,
   tenantId: string,
@@ -356,6 +412,7 @@ type Turn = {
   pause?: boolean;
   saveProfile?: boolean;
   saveSupply?: boolean;
+  saveBuyingInquiry?: boolean;
   information?: MarketInformationRequest;
   language?: MarketConversationLanguage;
 };
@@ -433,6 +490,186 @@ function summarize(
   return `${choose(language, "Please check these details:", "Kakasa ebikwata ku nnimiro yo:")}\n${rows.join("\n")}\n${choose(language, "To save only these details, reply", "Okutereka bino byokka, ddamu")} CONFIRM ${draft.confirmationToken}. ${supply ? "This submits an inquiry; it does not confirm a sale or price." : "This registers a private channel profile, not a web login or public listing."} RESTART: correct details. HUMAN: a person.`;
 }
 
+type BuyingStep =
+  | "consent"
+  | "name"
+  | "business"
+  | "district"
+  | "crop"
+  | "variety"
+  | "quantity"
+  | "grade"
+  | "needBy"
+  | "confirm";
+function buyingPrompt(
+  step: string,
+  language: MarketConversationLanguage,
+): string {
+  const prompts: Record<Exclude<BuyingStep, "confirm">, [string, string]> = {
+    consent: [
+      "To source produce for you, the Agribridge team will store your WhatsApp number, name, organisation, destination district, crop, quantity, quality needs and required date. This is a private purchasing inquiry, not a web account, accepted order or alert subscription. Reply AGREE to continue, CANCEL to leave, or HUMAN for a person.",
+      "Okukunoonyeza ebirime, ttiimu ya Agribridge etereka ennamba yo, amannya, bizinensi, ekifo, ekirime, obungi, omutindo n'olunaku lw'obyetaaga. Kino kisaba kyokka; si ndagaano ya kugula. Ddamu AGREE okukkiriza, CANCEL okuvaamu oba HUMAN okufuna omuntu.",
+    ],
+    name: [
+      "What name should the sourcing team use for you?",
+      "Ttiimu ekuyite ani?",
+    ],
+    business: [
+      "Which business or organisation are you buying for? Reply SAME to use your name.",
+      "Ogulira bizinensi oba ekibiina ki? Ddamu SAME okukozesa amannya go.",
+    ],
+    district: [
+      "In which district do you need the produce delivered or collected?",
+      "Ebirime obyetaaga mu disitulikiti ki?",
+    ],
+    crop: ["Which crop do you need to buy?", "Kirime ki ky'oyagala okugula?"],
+    variety: [
+      "Which variety do you need? Reply UNKNOWN if you want the team to advise.",
+      "Weetaaga kika ki? Bw'oba tomanyi, ddamu UNKNOWN.",
+    ],
+    quantity: [
+      "How many kilograms (kg) do you need? Send a number, for example 600. Bags and other units need a confirmed conversion with HUMAN.",
+      "Weetaaga kiro mmeka? Wandiika ennamba, ng'eky'okulabirako 600. Ebipimo ebirala byetaaga okukakasibwa n'omuntu.",
+    ],
+    grade: [
+      "What quality or grade do you require? Reply SKIP if you need advice. Quality must be confirmed with the seller.",
+      "Weetaaga mutindo ki? Ddamu SKIP bw'oba weetaaga obuyambi. Omutindo gwetaaga okukakasibwa n'omutunzi.",
+    ],
+    needBy: [
+      "By which date do you need the produce? Use YYYY-MM-DD, today or later.",
+      "Ebirime obyetaaga ddi? Kozesa YYYY-MM-DD, leero oba olunaku oluddako.",
+    ],
+  };
+  const values =
+    prompts[step as Exclude<BuyingStep, "confirm">] ?? prompts.consent;
+  return values[language === "lg" ? 1 : 0];
+}
+function summarizeBuying(draft: Record<string, unknown>): string {
+  return `Please check this private purchasing inquiry:\nBuyer: ${text(draft.buyerName)}\nBusiness: ${text(draft.businessName)}\nDestination district: ${text(draft.district)}\nCrop / variety: ${text(draft.crop)} / ${text(draft.variety) || "to confirm"}\nQuantity: ${draft.quantityKg} kg\nRequested quality: ${text(draft.grade) || "needs advice"}\nRequired by: ${text(draft.needBy)}\nReply CONFIRM ${draft.confirmationToken} to save only these details for the sourcing team. No stock is reserved, seller contacted automatically, order accepted or payment taken. RESTART: correct details. CANCEL: discard. HUMAN: a person.`;
+}
+function nextBuyingTurn(thread: MarketThread, body: string, now: Date): Turn {
+  const lower = body.toLowerCase().trim();
+  const draft = { ...thread.draft };
+  const step = text(draft.buyerStep);
+  const base: Turn = {
+    state: "menu",
+    draft,
+    reply: buyingPrompt(step, thread.language),
+  };
+  const field = (key: string, value: unknown, next: BuyingStep): Turn => ({
+    state: "menu",
+    draft: { ...draft, [key]: value, buyerStep: next },
+    reply: buyingPrompt(next, thread.language),
+  });
+  if (step === "consent")
+    return lower === "agree" ? field("buyerConsented", true, "name") : base;
+  if (draft.buyerConsented !== true)
+    return {
+      state: "menu",
+      draft: { flow: "buyer", buyerStep: "consent" },
+      reply: buyingPrompt("consent", thread.language),
+    };
+  if (/^confirm(?:\s|$)/.test(lower) && step !== "confirm")
+    return {
+      ...base,
+      reply: `There are no matching purchasing details ready for that confirmation. ${base.reply}`,
+    };
+  if (step === "confirm") {
+    const expires = Date.parse(text(draft.confirmationExpiresAt));
+    if (
+      !Number.isFinite(expires) ||
+      expires <= now.getTime() ||
+      !validDate(text(draft.needBy)) ||
+      text(draft.needBy) < marketDay(now)
+    )
+      return {
+        ...base,
+        reply:
+          "That purchasing confirmation expired or its required date has passed. Reply RESTART to review fresh details before saving.",
+      };
+    if (lower !== `confirm ${draft.confirmationToken}`)
+      return { ...base, reply: summarizeBuying(draft) };
+    return {
+      state: "menu",
+      draft: {},
+      saveBuyingInquiry: true,
+      reply:
+        "Your purchasing inquiry is saved for the Agribridge sourcing team. No accepted order, reserved stock or payment has been created. The team must confirm availability, grade, price, delivery and terms with you and the seller. Clients pay verified sellers directly when a payment provider is connected. Reply BROWSE followed by a crop to view public offers, HUMAN for a person, or MENU.",
+    };
+  }
+  if (step === "name")
+    return body.length >= 2 && body.length <= 100
+      ? field("buyerName", body, "business")
+      : {
+          ...base,
+          reply: "Please send a buyer name between 2 and 100 characters.",
+        };
+  if (step === "business")
+    return body.length >= 2 && body.length <= 120
+      ? field(
+          "businessName",
+          lower === "same" ? draft.buyerName : body,
+          "district",
+        )
+      : {
+          ...base,
+          reply:
+            "Please send a business name between 2 and 120 characters, or SAME.",
+        };
+  if (step === "district")
+    return body.length >= 2 && body.length <= 100
+      ? field("district", body, "crop")
+      : {
+          ...base,
+          reply:
+            "Please send a destination district between 2 and 100 characters.",
+        };
+  if (step === "crop")
+    return body.length >= 2 && body.length <= 60
+      ? field("crop", body, "variety")
+      : {
+          ...base,
+          reply: "Please send one crop name between 2 and 60 characters.",
+        };
+  if (step === "variety")
+    return body.length >= 2 && body.length <= 60
+      ? field("variety", lower === "unknown" ? "" : body, "quantity")
+      : {
+          ...base,
+          reply:
+            "Please send a variety between 2 and 60 characters, or UNKNOWN.",
+        };
+  if (step === "quantity") {
+    const amount = /^\d+(?:\.\d{1,3})?$/.test(body) ? Number(body) : NaN;
+    return Number.isFinite(amount) && amount > 0 && amount <= 100000000
+      ? field("quantityKg", amount, "grade")
+      : {
+          ...base,
+          reply:
+            "Send a positive number of kilograms, up to 100,000,000 kg. For bags or another unit, ask HUMAN to confirm its weight.",
+        };
+  }
+  if (step === "grade")
+    return body.length >= 1 && body.length <= 200
+      ? field("grade", lower === "skip" ? "" : body, "needBy")
+      : {
+          ...base,
+          reply: "Send a quality requirement up to 200 characters, or SKIP.",
+        };
+  if (step === "needBy") {
+    if (!validDate(body) || body < marketDay(now)) return base;
+    const summary = {
+      ...draft,
+      needBy: body,
+      buyerStep: "confirm",
+      confirmationToken: `${thread.version}-${randomInt(1000, 10000)}`,
+      confirmationExpiresAt: new Date(now.getTime() + WINDOW).toISOString(),
+    };
+    return { state: "menu", draft: summary, reply: summarizeBuying(summary) };
+  }
+  return { state: "menu", draft: {}, reply: marketMenu(thread.language) };
+}
+
 function nextTurn(
   thread: MarketThread,
   body: string,
@@ -443,6 +680,39 @@ function nextTurn(
   const lower = body.toLowerCase().trim();
   const language = thread.language;
   const base = { state: thread.state, draft: thread.draft };
+  const buying = thread.draft.flow === "buyer";
+  if (/^(buy|buyer|purchase)$/.test(lower) || (lower === "restart" && buying))
+    return {
+      reply: buyingPrompt("consent", language),
+      state: "menu",
+      draft: { flow: "buyer", buyerStep: "consent" },
+    };
+  if (/^(browse|produce)(?:\s|$)/.test(lower)) {
+    const parts = body.replace(/^\S+\s*/, "").split("|");
+    const crop =
+      cleanMarketText(parts[0] ?? "", 60) ||
+      (buying ? text(thread.draft.crop) : "");
+    if (!crop)
+      return {
+        ...base,
+        reply:
+          "Which crop would you like to buy? Send BROWSE followed by the crop, for example BROWSE Maize. Optionally use BROWSE Maize | Nakaseke to filter the seller's district. BUY starts a private purchasing inquiry.",
+      };
+    return {
+      ...base,
+      reply: "",
+      information: {
+        kind: "produce",
+        query: cleanMarketText(body, 600),
+        crop,
+        district: cleanMarketText(parts[1] ?? "", 100) || undefined,
+        minimumQuantityKg:
+          buying && typeof thread.draft.quantityKg === "number"
+            ? thread.draft.quantityKg
+            : undefined,
+      },
+    };
+  }
   const information =
     /^(buyers?|prices?|inputs?|transport|storage|weather)(?:\s|$)/i.exec(body);
   if (information) {
@@ -469,7 +739,7 @@ function nextTurn(
   }
   if (
     /^(language|english|luganda)$/.test(lower) ||
-    (thread.state === "menu" && /^(1|2)$/.test(lower))
+    (thread.state === "menu" && !buying && /^(1|2)$/.test(lower))
   ) {
     if (lower === "language")
       return {
@@ -488,14 +758,17 @@ function nextTurn(
       return {
         ...base,
         language: "lg",
-        reply: `${marketMenu("lg")}\n${thread.state !== "menu" ? prompt(thread.state, "lg") : ""}`,
+        reply: `${marketMenu("lg")}\n${buying ? buyingPrompt(text(thread.draft.buyerStep), "lg") : thread.state !== "menu" ? prompt(thread.state, "lg") : ""}`,
       };
     }
     return {
       ...base,
       language: "en",
-      reply:
-        thread.state === "menu" ? marketMenu("en") : prompt(thread.state, "en"),
+      reply: buying
+        ? buyingPrompt(text(thread.draft.buyerStep), "en")
+        : thread.state === "menu"
+          ? marketMenu("en")
+          : prompt(thread.state, "en"),
     };
   }
   if (/^(cancel|menu|help|resume)$/.test(lower))
@@ -506,7 +779,7 @@ function nextTurn(
     };
   if (
     /^(register|signup|sign up)$/.test(lower) ||
-    (lower === "restart" && !thread.state.startsWith("supply_"))
+    (lower === "restart" && !buying && !thread.state.startsWith("supply_"))
   )
     return {
       reply: consentPrompt(language),
@@ -535,6 +808,7 @@ function nextTurn(
       },
     };
   }
+  if (buying) return nextBuyingTurn(thread, body, now);
   if (
     /^confirm(?:\s|$)/.test(lower) &&
     !["confirm", "supply_confirm"].includes(thread.state)
@@ -806,6 +1080,29 @@ export async function prepareMarketConversationJob(
           d.harvestUntil,
           d.district,
           d.community,
+        ],
+      );
+    }
+    if (turn.saveBuyingInquiry) {
+      const d = thread.draft;
+      if (d.flow !== "buyer" || d.buyerConsented !== true)
+        throw new Error("Market purchasing inquiry consent missing");
+      await tx.query(
+        `INSERT INTO market_buyer_inquiries(id,tenant_id,phone,event_id,buyer_name,business_name,district,crop,variety,quantity_kg,grade,need_by,confirmed_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(tenant_id,event_id) DO NOTHING`,
+        [
+          randomUUID(),
+          job.tenant_id,
+          job.phone,
+          job.event_id,
+          d.buyerName,
+          d.businessName,
+          d.district,
+          d.crop,
+          d.variety,
+          d.quantityKg,
+          d.grade,
+          d.needBy,
+          now.toISOString(),
         ],
       );
     }

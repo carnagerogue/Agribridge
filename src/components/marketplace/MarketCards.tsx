@@ -10,6 +10,7 @@ import {
   Sprout,
 } from "lucide-react";
 import { Badge, Button } from "../ui";
+import type { ReactNode } from "react";
 import { label, number, ugx } from "../../lib/format";
 import { safeMarketSource, marketDate as date } from "../../lib/marketplace";
 import type {
@@ -220,12 +221,14 @@ export function SupplyCard({
   busy,
   online,
   onState,
+  publication,
 }: {
   supply: SupplyListing;
   matches: number;
   busy: boolean;
   online: boolean;
   onState: (status: SupplyListing["status"]) => void;
+  publication?: ReactNode;
 }) {
   return (
     <article className="market-supply-card">
@@ -248,7 +251,8 @@ export function SupplyCard({
       </div>
       <div className="market-supply-values">
         <strong>
-          {number(supply.quantityKg)} <span>kg available</span>
+          {number(supply.remainingQuantityKg ?? supply.quantityKg)}{" "}
+          <span>kg uncommitted</span>
         </strong>
         <strong>
           {supply.expectedPriceUgxPerKg === null
@@ -315,6 +319,7 @@ export function SupplyCard({
           )}
         </div>
       </footer>
+      {publication}
     </article>
   );
 }

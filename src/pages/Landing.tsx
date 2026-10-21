@@ -13,6 +13,8 @@ import {
   Play,
   Plus,
   Sprout,
+  ShoppingBasket,
+  Handshake,
   X,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
@@ -25,7 +27,6 @@ import {
 } from "../lib/landing";
 import { CinematicLandscape } from "../components/CinematicLandscape";
 import LandingWhatsApp from "../components/LandingWhatsApp";
-import WhatsAppMark from "../components/WhatsAppMark";
 import {
   useLandingMotion,
   useLandingMotionPreference,
@@ -33,8 +34,8 @@ import {
 import "../styles/landing.css";
 
 const navigation = [
+  { href: "#marketplace", label: "Marketplace" },
   { href: "#how-it-works", label: "WhatsApp" },
-  { href: "#learning", label: "Learning" },
   { href: "#cooperatives", label: "For cooperatives" },
 ];
 const secondTasks = [
@@ -214,12 +215,15 @@ export default function Landing() {
             ))}
           </nav>
           <div className="lp-header-actions">
-            {!user && demo && (
+            {!user && (
               <Link className="lp-sign-in" to="/login">
                 Sign in
               </Link>
             )}
-            {primaryAction("lp-header-cta")}
+            <Link className="lp-button lp-header-cta" to={user ? "/" : "/buy"}>
+              {user ? "Open workspace" : "Buy produce"}
+              <ArrowUpRight size={17} aria-hidden="true" />
+            </Link>
           </div>
           <button
             type="button"
@@ -287,22 +291,27 @@ export default function Landing() {
                 {narrative.description}
               </p>
               <div className="lp-hero-actions">
-                <Link className="lp-button" to="/whatsapp-demo">
-                  <WhatsAppMark size={20} />
-                  Try the WhatsApp demo <ArrowUpRight size={19} />
+                <Link className="lp-button" to="/buy">
+                  <ShoppingBasket size={20} />
+                  Buy produce <ArrowUpRight size={19} />
                 </Link>
-                <a className="lp-text-link" href="#how-it-works">
-                  See how it works <ArrowRight size={19} />
-                </a>
+                <Link
+                  className="lp-button lp-hero-seller"
+                  to="/whatsapp-demo?audience=farmer"
+                >
+                  Sell produce <ArrowUpRight size={19} />
+                </Link>
               </div>
               <p className="lp-hero-footnote">
-                WhatsApp experience preview. Live messaging is coming soon.
+                For the people who grow it. And the people who need it.
+                <a href="#how-it-works" className="lp-hero-how">
+                  See how it works <ArrowRight size={15} />
+                </a>
               </p>
-              {entry.kind === "demo" && (
-                <p className="lp-entry-note">
-                  Explore with sample records. No payment required.
-                </p>
-              )}
+              <p className="lp-entry-note">
+                Explore sample supply and conversation previews. Live WhatsApp
+                messaging and provider payments are not activated.
+              </p>
             </div>
             <CinematicLandscape
               paused={motionPaused}
@@ -341,23 +350,173 @@ export default function Landing() {
         </div>
         <div className="lp-principles">
           <div className="lp-width">
-            <a href="#how-it-works">
+            <a href="#marketplace">
               <small>01</small>
-              <span>Start a conversation</span>
+              <span>Find produce. Find buyers.</span>
               <ArrowDown size={18} />
             </a>
-            <a href="#farm-workspace">
+            <a href="#how-it-works">
               <small>02</small>
-              <span>Keep your farm connected</span>
+              <span>Connect on WhatsApp</span>
               <ArrowDown size={18} />
             </a>
             <a href="#cooperatives">
               <small>03</small>
-              <span>Move forward together</span>
+              <span>Agree. Collect. Grow.</span>
               <ArrowDown size={18} />
             </a>
           </div>
         </div>
+        <section
+          className="lp-marketplace lp-width lp-section"
+          id="marketplace"
+          aria-labelledby="marketplace-title"
+        >
+          <div className="lp-section-heading">
+            <div>
+              <p className="lp-section-label">
+                A MARKET THAT CONNECTS BOTH SIDES
+              </p>
+              <h2 id="marketplace-title">
+                Grown with care.
+                <br />
+                Bought with confidence.
+              </h2>
+            </div>
+            <p>
+              One place to discover produce, meet the people behind it and agree
+              the next step together.
+            </p>
+          </div>
+          <div className="lp-marketplace-grid">
+            <div className="lp-marketplace-copy">
+              <div className="lp-audience-story">
+                <ShoppingBasket size={23} aria-hidden="true" />
+                <div>
+                  <h3>For buyers</h3>
+                  <p>
+                    Browse produce on the web or ask on WhatsApp. Share the
+                    crop, quantity and delivery location you need, then review a
+                    seller’s offer.
+                  </p>
+                  <Link className="lp-text-link" to="/buy">
+                    Explore the marketplace <ArrowUpRight size={17} />
+                  </Link>
+                </div>
+              </div>
+              <div className="lp-audience-story">
+                <Sprout size={23} aria-hidden="true" />
+                <div>
+                  <h3>For farmers & cooperatives</h3>
+                  <p>
+                    Introduce your farm, list your harvest and connect with
+                    purchasing clients. Review requests and agree quality, price
+                    and collection terms.
+                  </p>
+                  <Link
+                    className="lp-text-link"
+                    to="/whatsapp-demo?audience=farmer"
+                  >
+                    Preview selling on WhatsApp <ArrowUpRight size={17} />
+                  </Link>
+                  <Link
+                    className="lp-seller-workspace"
+                    to={user ? "/farms" : "/login"}
+                  >
+                    Farmer workspace <ArrowRight size={15} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div
+              className="lp-market-browser"
+              aria-label="Illustrative web marketplace preview"
+            >
+              <div className="lp-market-browser-top">
+                <span>
+                  <Sprout size={20} /> Agribridge market
+                </span>
+                <small>Sample supply</small>
+              </div>
+              <h3>What are you sourcing?</h3>
+              <p className="lp-market-browser-note">
+                Illustrative listings · not live inventory
+              </p>
+              <div className="lp-market-supply">
+                {[
+                  {
+                    crop: "White maize",
+                    place: "Nakaseke",
+                    quantity: "600 kg",
+                    image: "fields",
+                  },
+                  {
+                    crop: "Dry beans",
+                    place: "Mbale",
+                    quantity: "400 kg",
+                    image: "market",
+                  },
+                  {
+                    crop: "Fresh cassava",
+                    place: "Jinja",
+                    quantity: "250 kg",
+                    image: "harvest",
+                  },
+                ].map((item) => (
+                  <Link
+                    key={item.crop}
+                    to="/buy"
+                    aria-label={`Explore sample ${item.crop.toLowerCase()} in the marketplace`}
+                  >
+                    <img
+                      src={`/images/agribridge-${item.image}-640.webp`}
+                      width={72}
+                      height={72}
+                      loading="lazy"
+                      alt=""
+                    />
+                    <span>
+                      <strong>{item.crop}</strong>
+                      <small>Sample grower · {item.place}</small>
+                    </span>
+                    <span className="lp-market-quantity">
+                      {item.quantity}
+                      <ArrowUpRight size={16} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <Link className="lp-button lp-button-dark" to="/buy">
+                Browse produce <ArrowRight size={17} />
+              </Link>
+            </div>
+          </div>
+          <div
+            className="lp-deal-path"
+            aria-label="How a purchase moves forward"
+          >
+            <span>
+              <small>01</small> Find the right supply
+            </span>
+            <ArrowRight size={18} aria-hidden="true" />
+            <span>
+              <small>02</small> Send a purchase request
+            </span>
+            <ArrowRight size={18} aria-hidden="true" />
+            <span>
+              <small>03</small> Seller accepts the terms
+            </span>
+            <ArrowRight size={18} aria-hidden="true" />
+            <span>
+              <small>04</small> Arrange payment & collection
+            </span>
+          </div>
+          <p className="lp-market-disclosure">
+            <Handshake size={16} aria-hidden="true" /> A request is not a
+            confirmed sale. Provider payments are planned; no checkout or
+            transfer is active.
+          </p>
+        </section>
         <LandingWhatsApp />
         <section
           className="lp-journey lp-width lp-section"
@@ -366,13 +525,13 @@ export default function Landing() {
         >
           <div className="lp-section-heading">
             <h2 id="journey-title">
-              Every part of your
+              A strong market starts
               <br />
-              season, connected.
+              with a strong farm.
             </h2>
             <p>
-              Keep the wider picture in your workspace, from farm records and
-              learning to harvests and buyer coordination.
+              Behind every listing is a growing season. Farm records, learning,
+              harvest lots and collection plans keep the wider picture together.
             </p>
           </div>
           <div
@@ -414,7 +573,7 @@ export default function Landing() {
                 {primaryAction("lp-button-outline")}
               </div>
             </div>
-            <SeasonPreview key={chapter.id} stage={stage} />
+            <SeasonPreview key={`preview-${chapter.id}`} stage={stage} />
           </div>
         </section>
         <section
@@ -483,14 +642,17 @@ export default function Landing() {
           </picture>
           <div className="lp-width lp-section lp-cooperative-grid">
             <div className="lp-cooperative-intro">
-              <p className="lp-section-label">FOR COOPERATIVES</p>
+              <p className="lp-section-label">
+                FOR FARMERS, COOPERATIVES & PURCHASING TEAMS
+              </p>
               <h2 id="cooperative-title">
-                Behind every farm,
-                <br />a connected team.
+                From individual farms
+                <br />
+                to a connected market.
               </h2>
               <p>
-                A shared view of farmer relationships, harvest collections and
-                the work that needs attention.
+                Coordinate supply across growers, understand buyer requests and
+                keep people informed as a harvest moves toward collection.
               </p>
               {!user && demo ? (
                 <button
@@ -519,17 +681,17 @@ export default function Landing() {
               <li>
                 <span>01</span>
                 <div>
-                  <h3>Keep people connected</h3>
+                  <h3>Bring growers and buyers together</h3>
                   <p>
-                    Keep farmer relationships, support requests and next steps
-                    together.
+                    Keep supplier relationships, purchasing conversations and
+                    support requests connected to the people involved.
                   </p>
                 </div>
               </li>
               <li>
                 <span>02</span>
                 <div>
-                  <h3>Bring harvests together</h3>
+                  <h3>Build a clearer collection plan</h3>
                   <p>
                     Connect harvest lots, recorded quality checks and buyer
                     collection plans.
@@ -539,7 +701,7 @@ export default function Landing() {
               <li>
                 <span>03</span>
                 <div>
-                  <h3>See what needs attention</h3>
+                  <h3>Keep the next step visible</h3>
                   <p>
                     Give your team a clear view of follow-ups, open reports and
                     the tasks ahead.
@@ -612,15 +774,21 @@ export default function Landing() {
             </details>
             <details>
               <summary>
-                How do I join Agribridge?
+                Can I buy and sell through Agribridge?
                 <Plus size={21} />
               </summary>
               <p>
-                The intended WhatsApp signup starts with your phone number,
-                followed by your name, community, produce and farm details. You
-                review the profile before confirming it. While the live WhatsApp
-                connection is being prepared, your cooperative or extension
-                officer can help you get a web account. If you already have one,{" "}
+                Buyers can <Link to="/buy">browse the web marketplace</Link> or
+                explore a{" "}
+                <Link to="/whatsapp-demo?audience=buyer">
+                  buyer conversation
+                </Link>
+                . Farmers can preview introducing a farm and listing produce on
+                WhatsApp. Agree the quantity, quality, price and collection
+                terms; the seller must accept a request before it becomes an
+                order. The public previews use sample records. For the existing
+                farm workspace, your cooperative can help you create an account,
+                then{" "}
                 <Link to={user ? "/" : "/login"}>
                   {user ? "open your workspace" : "sign in"}
                 </Link>
@@ -634,7 +802,10 @@ export default function Landing() {
               </summary>
               <p>
                 The WhatsApp experience is in preview. You can{" "}
-                <Link to="/whatsapp-demo">try the conversation demo</Link>{" "}
+                <Link to="/whatsapp-demo?audience=buyer">
+                  try the buyer demo
+                </Link>{" "}
+                or <Link to="/whatsapp-demo?audience=farmer">farmer demo</Link>{" "}
                 today; this page does not provide an active support number. The
                 demo uses sample information and sends no messages. WhatsApp
                 needs an internet connection; SMS and USSD are part of the
@@ -705,13 +876,23 @@ export default function Landing() {
         <section className="lp-closing" aria-labelledby="closing-title">
           <div className="lp-width lp-closing-main">
             <h2 id="closing-title">
-              Your next season
+              Your next harvest.
               <br />
-              starts with one step.
+              Your next connection.
             </h2>
             <div>
-              {primaryAction("lp-button-dark")}
-              {!user && demo && (
+              <div className="lp-closing-actions">
+                <Link className="lp-button lp-button-dark" to="/buy">
+                  Buy produce <ArrowUpRight size={18} />
+                </Link>
+                <Link
+                  className="lp-button lp-button-outline"
+                  to="/whatsapp-demo?audience=farmer"
+                >
+                  Sell produce <ArrowUpRight size={18} />
+                </Link>
+              </div>
+              {!user && (
                 <Link className="lp-closing-signin" to="/login">
                   Already have an account? Sign in
                 </Link>
@@ -740,7 +921,7 @@ export default function Landing() {
                 Data & privacy
               </a>
             </nav>
-            <p>Built around the way you farm. Uganda.</p>
+            <p>Connecting Uganda’s growers and buyers.</p>
           </footer>
         </section>
       </main>

@@ -742,3 +742,91 @@
     transition: none;
   }
 }
+.lwh-audiences {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 7px;
+  border: 1px solid #cbd7c2;
+  border-radius: 12px;
+  background: #e7eddf;
+  margin-bottom: 35px;
+}
+.lwh-audiences button {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 10px;
+  min-height: 64px;
+  padding: 14px 18px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #556a48;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lwh-audiences button[aria-selected="true"] {
+  border-color: #c3d2b9;
+  background: #fffefa;
+  color: #173c28;
+  box-shadow: 0 3px 8px #1933260d;
+}
+.lwh-audiences button > span {
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 5px;
+}
+.lwh-audiences button > svg {
+  flex-shrink: 0;
+}
+.lwh-eyebrow {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  color: #426e44;
+}
+.lwh-eyebrow > svg {
+  flex-shrink: 0;
+  color: #128c5b;
+}
+.lwh-payment-events li.lwh-payment-pending > span {
+  color: #79663f;
+  background: #fbf2d9;
+  border-color: #d6c89e;
+}
+.lwh-web-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  font-size: 12px;
+  margin-top: 6px;
+  text-underline-offset: 4px;
+}
+@media (max-width: 760px) {
+  .lwh-audiences {
+    gap: 5px;
+    padding: 5px;
+    margin-bottom: 23px;
+  }
+  .lwh-audiences button {
+    min-height: 72px;
+    font-size: 14px;
+    gap: 4px 7px;
+    padding: 10px 7px;
+  }
+  .lwh-audiences button > span {
+    flex: 0 0 100%;
+    font-size: 10px;
+    margin-left: 0;
+  }
+  .lwh-action {
+    order: 4;
+  }
+  .lwh-audiences button > svg {
+    width: 17px;
+  }
+}

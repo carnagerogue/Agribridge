@@ -5,22 +5,22 @@ const scenes = [
   {
     label: "growing",
     image: "fields",
-    heading: /Good things\s*grow together\./,
+    heading: /Good harvests\.\s*Meet good buyers\./,
   },
   {
     label: "harvesting",
     image: "harvest",
-    heading: /Every harvest,\s*accounted for\./,
+    heading: /Know the source\.\s*Choose your supply\./,
   },
   {
     label: "transporting",
     image: "transport",
-    heading: /Good harvests\.\s*Going places\./,
+    heading: /From farm gate\.\s*Plan the journey\./,
   },
   {
     label: "selling",
     image: "market",
-    heading: /Know your crop\.\s*Know its value\./,
+    heading: /Agree the terms\.\s*Grow together\./,
   },
 ] as const;
 
@@ -54,7 +54,9 @@ async function expectScene(page: Page, index: number) {
     .toBe(true);
   await expect
     .poll(() =>
-      frame.locator("img").evaluate((image: HTMLImageElement) => image.currentSrc),
+      frame
+        .locator("img")
+        .evaluate((image: HTMLImageElement) => image.currentSrc),
     )
     .toMatch(
       new RegExp(`/images/agribridge-${scene.image}-(640|1024|1536)\\.webp$`),

@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Agribridge",
   "short_name": "Agribridge",
-  "description": "Farm plans, practical learning, weather and agricultural markets for Uganda.",
+  "description": "Connect Ugandan farmers and cooperatives with produce buyers, alongside farm plans, learning and market information.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,5 +10,12 @@
   "theme_color": "#164b39",
   "lang": "en-UG",
   "categories": ["productivity", "education", "business"],
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

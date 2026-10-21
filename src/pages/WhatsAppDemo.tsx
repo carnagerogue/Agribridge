@@ -1,4 +1,14 @@
-import { useEffect, useReducer, useRef, useState, type FormEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -40,10 +50,65 @@ const scenarioIcons = {
   logistics: Truck,
   payment: CreditCard,
 };
+const BuyerWhatsAppDemo = lazy(() => import("../components/BuyerWhatsAppDemo"));
 
 export default function WhatsAppDemo({
   platformHref,
 }: { platformHref?: string } = {}) {
+  const [search, setSearch] = useSearchParams();
+  const buyer = search.get("audience") === "buyer";
+  const select = (audience: "farmer" | "buyer") => {
+    const next = new URLSearchParams(search);
+    if (audience === "buyer") next.set("audience", "buyer");
+    else next.delete("audience");
+    setSearch(next, { replace: true });
+  };
+  const audienceControl = (
+    <div
+      className="wd-audience-switch"
+      role="group"
+      aria-label="Choose farmer or buyer demo"
+    >
+      <button
+        type="button"
+        aria-pressed={!buyer}
+        onClick={() => select("farmer")}
+      >
+        Farmer · sell produce
+      </button>
+      <button
+        type="button"
+        aria-pressed={buyer}
+        onClick={() => select("buyer")}
+      >
+        Buyer · source produce
+      </button>
+    </div>
+  );
+  return buyer ? (
+    <Suspense
+      fallback={<div className="initial-loading">Opening the buyer demo…</div>}
+    >
+      <BuyerWhatsAppDemo
+        platformHref={platformHref}
+        audienceControl={audienceControl}
+      />
+    </Suspense>
+  ) : (
+    <FarmerWhatsAppDemo
+      platformHref={platformHref}
+      audienceControl={audienceControl}
+    />
+  );
+}
+
+function FarmerWhatsAppDemo({
+  platformHref,
+  audienceControl,
+}: {
+  platformHref?: string;
+  audienceControl?: ReactNode;
+}) {
   const [state, dispatch] = useReducer(reduceDemo, undefined, () =>
     createDemoState(),
   );
@@ -95,6 +160,7 @@ export default function WhatsAppDemo({
           <Sprout size={29} strokeWidth={1.7} />
           Agribridge
         </a>
+        {audienceControl}
         <div>
           <span className="wd-header-label">
             <span />

@@ -23,6 +23,46 @@
 .whatsapp-demo button {
   cursor: pointer;
 }
+.wd-header {
+  flex-wrap: wrap;
+}
+.wd-header > .wd-audience-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  background: #edf1e6;
+  border: 1px solid #dfe5d6;
+  border-radius: 9px;
+}
+.wd-audience-switch button {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #738167;
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 500;
+  white-space: nowrap;
+  min-height: 38px;
+}
+.wd-audience-switch button[aria-pressed="true"] {
+  background: #fff;
+  color: #28533b;
+  box-shadow: 0 1px 4px #193c2310;
+}
+@media (max-width: 700px) {
+  .wd-header > .wd-audience-switch {
+    order: 3;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .wd-audience-switch button {
+    padding-inline: 6px;
+    font-size: 11px;
+  }
+}
 .whatsapp-demo :focus-visible {
   outline: 3px solid #789c5d;
   outline-offset: 3px;

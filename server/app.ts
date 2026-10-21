@@ -75,6 +75,8 @@ import { createMarketDataService, mountMarketData } from "./market-data.js";
 import { mountMarketplace } from "./marketplace.js";
 import { createMarketDesk, mountMarketDesk } from "./market-intelligence.js";
 import { mountMarketOrders } from "./market-orders.js";
+import { mountBuyerMarketplace } from "./buyer.js";
+import { mountMarketBuyerOrders } from "./buyer-orders.js";
 import {
   mountMarketPayments,
   mountMarketPaymentWebhook,
@@ -83,6 +85,7 @@ import { mountMarketNotifications } from "./market-notifications.js";
 import {
   listMarketChannelRegistrations,
   listMarketChannelSupply,
+  listMarketBuyerInquiries,
   marketConversationStatus,
 } from "./market-conversation.js";
 import {
@@ -253,6 +256,7 @@ export function createApp(
     await audit(db, result.user, "auth.demo", "sessions");
     res.json(result);
   });
+  mountBuyerMarketplace(app, db, config);
   app.use("/api", authenticate(db, config));
   app.get("/api/auth/session", (req: AuthRequest, res) =>
     res.json({ user: req.user, csrfToken: req.csrfToken }),
@@ -382,6 +386,7 @@ export function createApp(
   mountMarketplace(app, db, config, env);
   mountMarketDesk(app, createMarketDesk(db, env, { marketData }), config);
   mountMarketOrders(app, db, config);
+  mountMarketBuyerOrders(app, db);
   mountMarketPayments(app, db, config, env);
   mountMarketNotifications(app, db, config, env);
   app.get(
@@ -389,12 +394,76 @@ export function createApp(
     requireOperator,
     async (req: AuthRequest, res) => {
       const tenant = req.user!.organizationId;
-      const [registrations, supply, status] = await Promise.all([
+      const [registrations, supply, buying, status] = await Promise.all([
         listMarketChannelRegistrations(db, tenant),
         listMarketChannelSupply(db, tenant),
+        listMarketBuyerInquiries(db, tenant),
         marketConversationStatus(db, tenant),
       ]);
-      res.json({ registrations, supply, status });
+      res.json({ registrations, supply, buying, status });
+    },
+  );
+  app.get(
+    "/api/marketplace/channel/buying-inquiries",
+    requireOperator,
+    async (req: AuthRequest, res) => {
+      const query = z
+        .object({
+          limit: z.coerce.number().int().min(1).max(100).default(50),
+          offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
+        })
+        .strict()
+        .parse(req.query);
+      res.json(
+        await listMarketBuyerInquiries(
+          db,
+          req.user!.organizationId,
+          query.limit,
+          query.offset,
+        ),
+      );
+    },
+  );
+  app.patch(
+    "/api/marketplace/channel-buying/:id",
+    requireOperator,
+    async (req: AuthRequest, res) => {
+      const input = z
+        .object({
+          expectedStatus: z.enum(["submitted", "acknowledged"]),
+          status: z.enum(["acknowledged", "closed"]),
+        })
+        .strict()
+        .parse(req.body);
+      const result = await mutate(db, req, async (tx) => {
+        const current = (
+          await tx.query<{ id: string; status: string }>(
+            "SELECT id,status FROM market_buyer_inquiries WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+            [req.user!.organizationId, req.params.id],
+          )
+        ).rows[0];
+        if (!current)
+          throw new ApiError(404, "NOT_FOUND", "Buying inquiry not found.");
+        if (current.status !== input.expectedStatus)
+          throw new ApiError(
+            409,
+            "VERSION_CONFLICT",
+            "This buying inquiry changed. Refresh before updating it.",
+          );
+        await tx.query(
+          "UPDATE market_buyer_inquiries SET status=$3 WHERE tenant_id=$1 AND id=$2",
+          [req.user!.organizationId, current.id, input.status],
+        );
+        await audit(
+          tx,
+          req.user!,
+          `market.channel_buying_${input.status}`,
+          "market_buyer_inquiries",
+          current.id,
+        );
+        return { status: 200, body: { id: current.id, status: input.status } };
+      });
+      res.status(result.status).json(result.body);
     },
   );
   app.patch(

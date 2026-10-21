@@ -1414,3 +1414,312 @@ html:has(.lp-motion-paused) {
     min-height: 700px;
   }
 }
+
+/* The public introduction gives growers and purchasing clients equal entry. */
+.lp-hero-actions .lp-hero-seller {
+  color: #fff !important;
+  background: #102e233d;
+  border-color: #ffffffb3;
+  backdrop-filter: blur(10px);
+}
+.lp-hero-actions .lp-hero-seller:hover {
+  background: #ffffff1a;
+}
+.lp-hero-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 16px;
+  min-height: 40px;
+  text-underline-offset: 4px;
+}
+.lp-marketplace {
+  scroll-margin-top: 20px;
+}
+.lp-marketplace-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  align-items: center;
+  gap: clamp(40px, 7vw, 100px);
+}
+.lp-marketplace-copy {
+  display: grid;
+  gap: 37px;
+  min-width: 0;
+}
+.lp-audience-story {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.lp-audience-story > svg {
+  flex-shrink: 0;
+  margin-top: 6px;
+  color: #527141;
+}
+.lp-audience-story h3 {
+  font-size: clamp(28px, 2.8vw, 39px);
+  line-height: 1.15;
+}
+.lp-audience-story p {
+  color: var(--lp-muted);
+  font-size: 14px;
+  margin-top: 14px !important;
+  max-width: 425px;
+}
+.lp-audience-story .lp-text-link {
+  color: var(--lp-ink);
+  font-size: 12px;
+  margin-top: 7px;
+}
+.lp-market-browser {
+  min-width: 0;
+  padding: clamp(22px, 3vw, 40px);
+  background: #fffefa;
+  border: 1px solid #ccd8c6;
+  border-radius: 12px;
+  box-shadow: 0 18px 55px -35px #193a2a80;
+}
+.lp-market-browser-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 27px;
+}
+.lp-market-browser-top > span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font:
+    18px Georgia,
+    serif;
+  letter-spacing: -0.7px;
+}
+.lp-market-browser-top small {
+  background: #eef2e6;
+  color: #516d43;
+  padding: 3px 7px;
+  font-size: 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.lp-market-browser h3 {
+  font-size: clamp(29px, 2.7vw, 39px);
+  line-height: 1.15;
+}
+.lp-market-browser-note {
+  margin-top: 9px !important;
+  color: #6b7864;
+  font-size: 11px;
+}
+.lp-market-supply {
+  display: grid;
+  margin-block: 22px 24px;
+}
+.lp-market-supply a {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  padding-block: 16px;
+  border-bottom: 1px solid #e0e6d9;
+  text-decoration: none;
+  min-width: 0;
+}
+.lp-market-supply img {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.lp-market-supply a > span:nth-child(2) {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.lp-market-supply strong {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.lp-market-supply small {
+  color: #727c6a;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.lp-market-quantity {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.lp-market-quantity svg {
+  color: #768969;
+}
+.lp-market-browser > .lp-button {
+  width: 100%;
+  min-height: 47px;
+  font-size: 12px;
+}
+.lp-deal-path {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding-block: 33px;
+  border-block: 1px solid var(--lp-line);
+  margin-top: 56px;
+}
+.lp-deal-path > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.lp-deal-path small {
+  color: #6c865c;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.lp-deal-path > svg {
+  color: #849575;
+  flex-shrink: 0;
+}
+.lp-market-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #67755e;
+  font-size: 11px;
+  margin-top: 18px !important;
+}
+.lp-market-disclosure svg {
+  flex-shrink: 0;
+}
+.lp-closing-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 1000px) {
+  .lp-header {
+    gap: 15px;
+  }
+  .lp-desktop-nav {
+    gap: 19px;
+  }
+  .lp-marketplace-grid {
+    gap: 35px;
+  }
+  .lp-deal-path {
+    gap: 10px;
+  }
+  .lp-deal-path > span {
+    font-size: 11px;
+  }
+}
+@media (max-width: 760px) {
+  .lp-marketplace-grid {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+  .lp-audience-story {
+    gap: 13px;
+  }
+  .lp-marketplace-copy {
+    gap: 27px;
+  }
+  .lp-market-browser {
+    padding: 23px;
+  }
+  .lp-market-browser-top {
+    margin-bottom: 24px;
+  }
+  .lp-market-browser-top > span {
+    font-size: 17px;
+  }
+  .lp-deal-path {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 33px;
+    padding-block: 25px;
+  }
+  .lp-deal-path > svg {
+    display: none;
+  }
+  .lp-deal-path > span {
+    font-size: 12px;
+    align-items: flex-start;
+  }
+  .lp-market-disclosure {
+    justify-content: flex-start;
+    align-items: flex-start;
+    font-size: 10px;
+  }
+  .lp-closing-actions {
+    flex-direction: column;
+  }
+  .lp-hero-how {
+    margin-left: 0;
+    display: flex;
+    width: fit-content;
+    margin-top: 4px;
+  }
+}
+@media (max-width: 420px) {
+  .lp-hero-actions {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .lp-hero-actions .lp-button {
+    min-height: 50px;
+    padding: 13px 17px;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .lp-market-browser {
+    padding: 20px 17px;
+  }
+  .lp-market-browser-top {
+    gap: 5px;
+  }
+  .lp-market-browser-top > span {
+    font-size: 16px;
+  }
+  .lp-market-browser-top small {
+    padding-inline: 5px;
+    font-size: 8px;
+  }
+  .lp-market-supply a {
+    gap: 10px;
+  }
+  .lp-market-supply img {
+    width: 49px;
+    height: 49px;
+  }
+  .lp-market-supply strong {
+    font-size: 13px;
+  }
+  .lp-market-supply small {
+    font-size: 9px;
+  }
+  .lp-market-quantity {
+    font-size: 12px;
+  }
+}
+.lp-seller-workspace {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 35px;
+  width: fit-content;
+  color: #60754f !important;
+  font-size: 11px;
+  text-underline-offset: 4px;
+}

@@ -4,6 +4,7 @@ import { sendOutbound } from "./channels/providers.js";
 import type { OutboundMessage, OutboundResult } from "./channels/types.js";
 import { reserveMessageBudget } from "./messaging-budget.js";
 import { listMarketDemand, listMarketServices } from "./marketplace.js";
+import { listBuyerCatalog } from "./buyer-catalog.js";
 import {
   cleanMarketText,
   marketConversationEnabled,
@@ -48,6 +49,26 @@ export async function retrieveMarketConversationInformation(
   request: MarketInformationRequest,
   context: RetrievalContext,
 ): Promise<string> {
+  if (request.kind === "produce") {
+    if (!request.crop)
+      return "Send BROWSE followed by the crop you need, for example BROWSE Maize. BUY starts a private purchasing inquiry.";
+    const catalog = await listBuyerCatalog(db, {
+      crop: request.crop,
+      district: request.district,
+      minQuantityKg: request.minimumQuantityKg,
+      limit: 2,
+    });
+    return catalog.items.length
+      ? "Seller-published offers; quality and availability need confirmation. These are not accepted orders.\n\n" +
+          catalog.items
+            .map(
+              (offer) =>
+                `${cleanMarketText(offer.sellerName, 100)}: ${cleanMarketText(offer.crop, 60)}${offer.variety ? ` / ${cleanMarketText(offer.variety, 60)}` : ""}, ${offer.availableQuantityKg} kg, ${cleanMarketText(offer.district, 80)}. Available ${offer.harvestFrom} to ${offer.harvestUntil}. ${offer.priceUgxPerKg === null ? "Price to agree with the seller." : `Seller's asking price UGX ${offer.priceUgxPerKg}/kg; charges and final terms need agreement.`} ${offer.grade ? `Seller-declared grade: ${cleanMarketText(offer.grade, 80)}. ` : ""}`,
+            )
+            .join("\n\n") +
+          "\nThese are sellers' public listings, not inspected stock or accepted orders. Reply BUY to give the sourcing team your requirements, or HUMAN. No phone number or private farmer profile is disclosed."
+      : "No currently published non-sample offer matches that crop and quantity. We will not invent stock. Reply BUY to submit a private sourcing inquiry or HUMAN for the Agribridge team. A matching offer still needs seller confirmation.";
+  }
   if (request.kind === "buyers") {
     const rows = await listMarketDemand(db, context.tenantId, {
       limit: 3,

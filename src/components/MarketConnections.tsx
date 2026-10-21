@@ -36,6 +36,7 @@ import type { MarketCatalog } from "../../server/marketplace-types";
 import type {
   MarketChannelProfile,
   MarketChannelSupply,
+  MarketBuyerInquiry,
 } from "../../server/market-conversation";
 
 type Orders = {
@@ -56,6 +57,7 @@ type ChannelLink = {
 type ChannelIntake = {
   registrations: { items: MarketChannelProfile[]; hasMore: boolean };
   supply: { items: MarketChannelSupply[]; hasMore: boolean };
+  buying: { items: MarketBuyerInquiry[]; hasMore: boolean };
   status: { counts: Record<string, number> };
 };
 const confirmationCopy = {
@@ -583,8 +585,8 @@ export function MarketConnections() {
             <div>
               <h3 id="market-intake-title">From the WhatsApp market desk</h3>
               <p>
-                Private, farmer-confirmed registrations and produce inquiries
-                for your team to follow up.
+                Private, confirmed farmer registrations, produce availability
+                and client purchasing inquiries for your team to follow up.
               </p>
             </div>
             <Link className="button button-secondary" to="/messages">
@@ -695,7 +697,116 @@ export function MarketConnections() {
               </div>
             </article>
           ))}
-          {(intake.registrations.hasMore || intake.supply.hasMore) && (
+          <div className="market-section-heading">
+            <div>
+              <h4>Client purchasing inquiries</h4>
+              <p>
+                Confirmed requirements from WhatsApp. Contact the client through
+                the staff inbox to agree the next step; these are not accepted
+                orders.
+              </p>
+            </div>
+          </div>
+          {intake.buying.items.length ? (
+            intake.buying.items.map((item) => (
+              <article className="market-order-row" key={item.id}>
+                <div>
+                  <div className="market-inline">
+                    <h4>
+                      {item.crop}
+                      {item.variety ? ` · ${item.variety}` : ""}
+                    </h4>
+                    <Badge>{label(item.status)}</Badge>
+                  </div>
+                  <p>
+                    {item.businessName} · {item.buyerName} ·{" "}
+                    {number(item.quantityKg)} kg
+                  </p>
+                  <p>
+                    Destination: {item.district} · Required by{" "}
+                    {date(item.needBy)}
+                  </p>
+                  <p>
+                    {item.grade
+                      ? `Requested quality: ${item.grade}`
+                      : "Quality needs advice and seller confirmation."}
+                  </p>
+                  <small>
+                    WhatsApp {item.phone} · Client confirmed{" "}
+                    {date(item.confirmedAt)}. No stock reserved or payment
+                    collected.
+                  </small>
+                  <details>
+                    <summary>Confirmation reference</summary>
+                    <p>Inquiry {item.id}</p>
+                    <p>Incoming message {item.eventId}</p>
+                    <p>
+                      Match this WhatsApp number in the staff inbox before
+                      replying. Acknowledging or closing does not send a
+                      message.
+                    </p>
+                  </details>
+                </div>
+                <div className="market-order-actions">
+                  {item.status === "submitted" && (
+                    <Button
+                      variant="secondary"
+                      disabled={!!busy || !online}
+                      onClick={() =>
+                        void run(
+                          item.id,
+                          async () => {
+                            await request(
+                              `/api/marketplace/channel-buying/${item.id}`,
+                              "PATCH",
+                              {
+                                expectedStatus: item.status,
+                                status: "acknowledged",
+                              },
+                              crypto.randomUUID(),
+                            );
+                          },
+                          "Purchasing inquiry acknowledged.",
+                        )
+                      }
+                    >
+                      Acknowledge
+                    </Button>
+                  )}
+                  {item.status !== "closed" && (
+                    <Button
+                      variant="ghost"
+                      disabled={!!busy || !online}
+                      onClick={() =>
+                        void run(
+                          item.id,
+                          async () => {
+                            await request(
+                              `/api/marketplace/channel-buying/${item.id}`,
+                              "PATCH",
+                              { expectedStatus: item.status, status: "closed" },
+                              crypto.randomUUID(),
+                            );
+                          },
+                          "Purchasing inquiry closed.",
+                        )
+                      }
+                    >
+                      Close inquiry
+                    </Button>
+                  )}
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="market-help">
+              No confirmed client purchasing inquiries yet. Clients can send BUY
+              to the WhatsApp market desk once that channel is connected.
+            </p>
+          )}
+          {(intake.registrations.hasMore ||
+            intake.supply.hasMore ||
+            intake.buying.hasMore) && (
             <p className="market-help">
               Showing the latest 50 records. Additional intake remains available
               through the staff API.

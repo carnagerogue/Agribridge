@@ -5,6 +5,7 @@ import type { AppConfig } from "./config.js";
 import type { Database, Queryable } from "./db.js";
 import { ApiError, type AuthRequest, type User } from "./security.js";
 import { audit, mutate } from "./store.js";
+import { committedMarketQuantity } from "./marketplace.js";
 
 export type MarketOrderStatus =
   "requested" | "accepted" | "cancelled" | "fulfilled";
@@ -113,11 +114,7 @@ function mutationKey(req: AuthRequest) {
     );
 }
 async function reserved(tx: Queryable, tenant: string, supply: string) {
-  const result = await tx.query<{ total: string }>(
-    `SELECT COALESCE(SUM(quantity_kg),0)::text AS total FROM market_orders WHERE tenant_id=$1 AND supply_id=$2 AND status IN ('accepted','fulfilled')`,
-    [tenant, supply],
-  );
-  return Number(result.rows[0].total);
+  return committedMarketQuantity(tx, tenant, supply);
 }
 
 /** Caller must provide an existing transaction; supply lock serializes accept/update. */

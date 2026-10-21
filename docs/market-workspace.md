@@ -11,11 +11,12 @@ The market workspace is available at `/marketplace` for signed-in community memb
 - Dated input, transport and storage quotes with provider, unit, source URL/title, observation date, validity and verification status. Reported, expired and sample records are distinguished.
 - A market desk that retrieves source facts for prices, weather, input costs, logistics and recorded demand. It does not generate prices or buyers. An explicit question's crop/location takes precedence over saved profile defaults; a fertilizer question cannot be answered using a seed quote.
 - A sanitized, authenticated community supply catalog and single-seller order requests. Seller/staff acceptance snapshots terms and reserves declared quantity atomically. Fulfillment consumes it; eligible cancellation releases it. Existing whole-lot harvest commitments are not silently repurposed as these new declarations.
+- A public buyer marketplace at `/buy`, with explicit seller publication, separate buyer accounts and private cross-organization order requests. See [buyer marketplace](buyer-marketplace.md) for its account, publication and order contract.
 - Trusted payment-event processing with amount/currency/payer/seller/order checks, transaction/event deduplication, refund history and approval/confirmation messages. No endpoint initiates a charge or collects client funds.
 - Verified WhatsApp account linking with expiring hash-only codes, separate payment-notification consent, durable notification processing, template/window enforcement, spending limits and delivery reconciliation.
 - Optional WhatsApp guided registration and produce intake, source-information commands, staff handover and STOP. Confirmed channel profiles/inquiries are visible to authorized staff under Orders & updates. They do not silently claim an application login or become public seller listings.
 
-Profiles, offers, orders, messages and intake remain organization-scoped. Cross-organization public storefronts, open client onboarding and global fulfillment are separate extensions; current publication does not expose private profile phones, exact household details or financial records.
+Farmer/cooperative profiles, internal offers and orders, messages and channel intake remain organization-scoped. The public buyer marketplace exposes only an explicitly published seller projection; buyer accounts are separate from organization members. A buyer can see only their own requests, and sellers or authorized cooperative staff can see requests for their own seller scope. Publication does not expose profile phones, private notes, precise farm coordinates or financial records.
 
 ## Local development and checks
 
@@ -27,7 +28,7 @@ npm ci
 PUBLIC_ORIGIN=http://localhost:5180 AGRIBRIDGE_DEMO=true npm run dev
 ```
 
-The API defaults to origin `http://localhost:5180`, matching Vite. PGlite persists under the ignored `.data` directory. Startup applies numbered migrations 1–6; never edit a migration already applied to a retained database. Demo seeds are idempotent and clearly marked sample; fictional buyers/quotes are not production data or evidence of actual demand.
+The API defaults to origin `http://localhost:5180`, matching Vite. PGlite persists under the ignored `.data` directory. Startup applies numbered migrations 1–7; migration 7 adds isolated buyer identities, order requests and seller-controlled publication. Never edit a migration already applied to a retained database. Demo seeds are idempotent and clearly marked sample; fictional buyers/quotes are not production data or evidence of actual demand.
 
 ```sh
 npm run typecheck
@@ -88,4 +89,4 @@ Weather uses explicitly mapped district/model-grid forecasts and separate offici
 
 Input and logistics information currently comes from operator-entered sourced quotes. A web link is provenance, not proof that a quote is current or a supplier is available. The system does not scrape arbitrary websites, bypass provider access controls or invent prices. Automated acquisition should be added source by source after confirming permitted access, licensing, coverage, units, freshness and refresh/error rules. Existing network restrictions may need approved source domains added in environment settings.
 
-Remaining activation work includes actual organizations and current listings, direct-settlement provider choice, seller verification, approved templates, production credentials/domain, reviewed Luganda content, media/speech support, and consented end-to-end delivery tests. Automated price/weather subscriptions and a public multi-organization storefront are still planned; the payment notification service does not imply those schedulers exist.
+Remaining activation work includes actual organizations and published current listings, direct-settlement provider choice, seller verification, approved templates, production credentials/domain, reviewed Luganda content, media/speech support, and consented end-to-end delivery tests. Automated price/weather subscriptions remain planned; the payment notification service does not imply those schedulers exist. The implemented public buyer marketplace has its own [account and order boundaries](buyer-marketplace.md); its orders do not yet support integrated checkout or payment notifications.

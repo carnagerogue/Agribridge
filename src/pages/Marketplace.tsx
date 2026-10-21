@@ -49,6 +49,8 @@ import {
 } from "../components/marketplace/MarketForms";
 import { MarketDesk } from "../components/marketplace/MarketDesk";
 import { MarketConnections } from "../components/MarketConnections";
+import { SupplyPublication } from "../components/marketplace/SupplyPublication";
+import { SellerBuyerOrders } from "../components/marketplace/SellerBuyerOrders";
 import { rawRequest, request } from "../lib/api";
 import { districts, label, number, today } from "../lib/format";
 import {
@@ -67,6 +69,7 @@ import type {
   SupplyListing,
 } from "../../server/marketplace-types";
 import "../styles/marketplace.css";
+import "../styles/market-buyers.css";
 
 type Tab = "buyers" | "produce" | "services" | "business" | "connections";
 type Editor = "business" | "supply" | "interest" | "demand" | "service" | null;
@@ -221,6 +224,35 @@ function MarketWorkspace() {
   function startListing(demand?: BuyerDemand) {
     setSelectedDemand(demand ?? null);
     setEditor(profile ? "supply" : "business");
+  }
+
+  async function publishSupply(supply: SupplyListing, published: boolean) {
+    if (!online || stateLock.current)
+      throw new Error("Reconnect and wait for the current change to finish.");
+    stateLock.current = true;
+    setBusyId(supply.id);
+    const body = { version: supply.version, published };
+    try {
+      await request(
+        `/api/marketplace/supply/${encodeURIComponent(supply.id)}/publication`,
+        "POST",
+        body,
+        keyFor(`publication:${supply.id}`, body),
+      );
+      notify(
+        published
+          ? "Produce published to the buyer marketplace."
+          : "Public listing removed.",
+      );
+      await read();
+    } catch (failure) {
+      // Refresh the version after a conflict while retaining the dialog's error.
+      await read();
+      throw failure;
+    } finally {
+      stateLock.current = false;
+      if (mounted.current) setBusyId("");
+    }
   }
 
   function offerFor(demand: BuyerDemand) {
@@ -619,6 +651,16 @@ function MarketWorkspace() {
                         online={online}
                         busy={busyId === supply.id}
                         onState={(status) => void updateSupply(supply, status)}
+                        publication={
+                          <SupplyPublication
+                            supply={supply}
+                            online={online}
+                            busy={busyId === supply.id}
+                            onChange={(published) =>
+                              publishSupply(supply, published)
+                            }
+                          />
+                        }
                       />
                     ))}
                   </div>
@@ -726,7 +768,12 @@ function MarketWorkspace() {
                 )}
               </>
             ) : null}
-            {tab === "connections" ? <MarketConnections /> : null}
+            {tab === "connections" ? (
+              <>
+                <SellerBuyerOrders online={online} onChange={read} />
+                <MarketConnections />
+              </>
+            ) : null}
             {tab === "business" ? (
               <BusinessOverview
                 profile={profile}

@@ -1,8 +1,10 @@
 # Agribridge
 
-A Uganda-first agricultural workspace for farmers, cooperatives and extension teams. Built around short, useful information, shared operational records and unreliable connectivity.
+A Uganda-first marketplace connecting farmers and cooperatives with produce buyers, alongside practical farm tools and local support.
 
 ## What works
+
+- **Buyer marketplace:** a public, seller-published produce catalog at `/buy`, separate buyer accounts, purchase requests, delivery preferences and order tracking. Sellers review requests and commit stock on acceptance. A clearly labelled, browser-only sample marketplace lets visitors explore buying before real supply is published. Private listings, phone numbers and farm records remain outside the public catalog. Direct-to-seller checkout awaits provider activation. See [buyer marketplace](docs/buyer-marketplace.md).
 
 - **Market workspace:** business profiles, produce/harvest availability, organization buyer requests, explainable matches, broker introductions, sourced input/transport/storage quotes, and order requests with atomic quantity commitments. The authenticated community catalog keeps private profiles separate. Payment events and verified WhatsApp notification delivery are implemented; real checkout still needs a direct-to-seller provider. See [market workspace and activation](docs/market-workspace.md).
 
@@ -15,12 +17,12 @@ A Uganda-first agricultural workspace for farmers, cooperatives and extension te
 - **Weather:** dated MET Norway or Open-Meteo model forecasts and a separate official Uganda MWE warning feed. Missing weather is shown as unavailable.
 - **Community observations:** crop concerns and standing-water reports with operator review. No patient records or automatic malaria/crop diagnosis.
 - **Low-connectivity access:** an installable web app, explicitly enabled offline farm/learning storage, queued supported edits, conflict handling, and a USSD menu preview. First load and synchronization still need internet.
-- **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded replies, verified account linking and optional guided market signup/produce intake. Sender accounts/shortcodes must be provisioned; free-form WhatsApp AI and automated speech remain inactive.
+- **SMS and WhatsApp:** real provider adapters, authenticated callbacks, consent withdrawal and delivery receipts. WhatsApp adds a staff-only support inbox, bounded replies, verified account linking, guided farmer signup/produce intake, private buyer sourcing inquiries and public produce browsing. Sender accounts/shortcodes must be provisioned; free-form WhatsApp AI and automated speech remain inactive.
 - **Farm assistant:** consented, source-grounded OpenAI answers with request budgets and safety referrals. Workspace instructions are available immediately; production crop advice requires reviewed guidance. Demo answers label draft sources.
 
 ## Finding your way
 
-The public introduction is at `/welcome`, also shown at `/` when signed out. Sign in at `/login`. The workspace has five primary destinations: **Home, Marketplace, Farms, Weather and Prices**. Learning, season planning, harvest and other specialist features remain under **More tools**; authorized staff also get **Cooperative tools**. Home offers a single next task and short paths into the main activities.
+The public introduction is at `/welcome`, also shown at `/` when signed out. Purchasing clients browse and create their buyer account at `/buy`; the WhatsApp previews at `/whatsapp-demo` show both farmer and buyer journeys. Farmers and cooperative staff sign in at `/login`. The workspace has five primary destinations: **Home, Marketplace, Farms, Weather and Prices**. Learning, season planning, harvest and other specialist features remain under **More tools**; authorized staff also get **Cooperative tools**. Home offers a single next task and short paths into the main activities.
 
 Learn starts with **Soil & water**, **Protect crops** and **Harvest & storage**, linking to FAO's own website rather than copying its courses. Courses require a free FAO account and a connection; mobile data charges may apply, and a larger screen is recommended. The listed course downloads are for Windows computers, not offline phone lessons. A separate public fall-armyworm PDF needs no account, is about 7.2 MB and dates from 2018; it is a training reference, not current diagnostic or pesticide advice. External actions are disabled while Agribridge is offline. The **Short field guides** view retains Agribridge's local guides and progress. No FAO partnership, endorsement or course-completion synchronization is claimed.
 
@@ -48,7 +50,7 @@ npm run web -- --port 5180 --strictPort
 
 Open [http://localhost:5180](http://localhost:5180) for the introduction, then [the sign-in page](http://localhost:5180/login) to choose farmer, operator or administrator demo access. Operational demo records are labelled sample and separated from the real WFP published observations. Demo mode disables outgoing SMS/WhatsApp delivery even if credentials exist. It can still call configured weather and AI providers, so AI usage may incur charges.
 
-The development and preview servers use strict port **5180**. The convenience `npm run demo` command uses that same port; keep `PUBLIC_ORIGIN=http://localhost:5180` aligned with the browser URL. Production rejects demo mode and requires real administrator-provisioned identities.
+The development and preview servers use strict port **5180**. The convenience `npm run demo` command uses that same port; keep `PUBLIC_ORIGIN=http://localhost:5180` aligned with the browser URL. Production rejects demo mode. Farmer and staff workspace identities require administrator provisioning; purchasing clients can create separate buyer accounts at `/buy`.
 
 To test offline reopening, run `npm run build`, stop the development web server, then run `npm run preview`. Enable saved device access in Connection & settings while connected. Only use a trusted device: browser storage is not encrypted. Private notes, customer contacts, financial records and harvest manifests are excluded from offline browsing. Lock workspace hides the interface while preserving unsynced work; reopening a locked workspace requires a connection and explicit sign-in.
 

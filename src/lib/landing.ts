@@ -2,34 +2,34 @@ export const landingStory = [
   {
     id: "fields",
     label: "Growing",
-    title: "Good things",
-    emphasis: "grow together.",
+    title: "Good harvests.",
+    emphasis: "Meet good buyers.",
     description:
-      "Your farm. Your next buyer. Explore how a WhatsApp conversation could connect your produce to markets, with one workspace for everything that follows.",
+      "Buy Uganda-grown produce or bring your harvest to market. Agribridge connects farmers, cooperatives and purchasing teams on the web and WhatsApp.",
   },
   {
     id: "harvest",
     label: "Harvesting",
-    title: "Every harvest,",
-    emphasis: "accounted for.",
+    title: "Know the source.",
+    emphasis: "Choose your supply.",
     description:
-      "Record what you harvest, track quality checks and keep every lot connected to the farm it came from.",
+      "Farmers share what they grow. Buyers review quantities, locations and recorded quality checks, with each harvest connected to its source.",
   },
   {
     id: "transport",
     label: "Transporting",
-    title: "Good harvests.",
-    emphasis: "Going places.",
+    title: "From farm gate.",
+    emphasis: "Plan the journey.",
     description:
-      "Bring farmers and collection teams together, with shared harvest records and coordinated pickup plans.",
+      "Agree collection or delivery with the seller before an order moves forward. Keep quantities, timing and transport arrangements together.",
   },
   {
     id: "market",
     label: "Selling",
-    title: "Know your crop.",
-    emphasis: "Know its value.",
+    title: "Agree the terms.",
+    emphasis: "Grow together.",
     description:
-      "Compare published reference prices, record your sales and plan your next step with more context.",
+      "Compare supply, send a purchase request and agree a price with the seller. A request becomes a confirmed order only after acceptance.",
   },
 ] as const;
 

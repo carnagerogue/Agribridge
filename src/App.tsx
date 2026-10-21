@@ -23,6 +23,7 @@ const LessonReader = lazy(() =>
 const Weather = lazy(() => import("./pages/Weather"));
 const Markets = lazy(() => import("./pages/Markets"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
+const BuyerMarketplace = lazy(() => import("./pages/BuyerMarketplace"));
 const WhatsAppDemo = lazy(() => import("./pages/WhatsAppDemo"));
 const Community = lazy(() => import("./pages/Community"));
 const CRM = lazy(() => import("./pages/CRM"));
@@ -156,6 +157,16 @@ function Application() {
 }
 function AppEntry() {
   const location = useLocation();
+  if (location.pathname === "/buy")
+    return (
+      <Suspense
+        fallback={
+          <div className="initial-loading">Opening the marketplace…</div>
+        }
+      >
+        <BuyerMarketplace />
+      </Suspense>
+    );
   if (location.pathname === "/whatsapp-demo")
     return (
       <Suspense

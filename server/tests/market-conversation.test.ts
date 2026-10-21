@@ -10,9 +10,13 @@ import {
   getMarketChannelProfile,
   listMarketChannelRegistrations,
   listMarketChannelSupply,
+  listMarketBuyerInquiries,
   marketConversationStatus,
 } from "../market-conversation.js";
-import { drainMarketConversationJobs } from "../market-conversation-worker.js";
+import {
+  drainMarketConversationJobs,
+  retrieveMarketConversationInformation,
+} from "../market-conversation-worker.js";
 
 let db: Database;
 let clock = new Date();
@@ -119,6 +123,183 @@ async function register(phone: string) {
   await step(phone, `CONFIRM ${proposal.confirmationToken}`);
   return await getMarketChannelProfile(db, "conversation-a", phone);
 }
+
+async function buyingDraft(phone: string, quantity = "600") {
+  const needBy = new Date(clock.getTime() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  for (const body of [
+    "BUY",
+    "AGREE",
+    "Sample client",
+    "Sample restaurant",
+    "Kampala",
+    "Maize",
+    "White",
+    quantity,
+    "A",
+    needBy,
+  ])
+    await step(phone, body);
+  return (
+    await db.query<any>(
+      `SELECT draft FROM market_channel_threads WHERE tenant_id='conversation-a' AND phone=$1`,
+      [phone],
+    )
+  ).rows[0].draft;
+}
+
+test("purchasing inquiry requires separate consent and exact readback, is idempotent and grants no buyer account or financial privilege", async () => {
+  const phone = "+256700088201";
+  const initial = await step(phone, "BUYER");
+  assert.match(initial.reply_body, /AGREE/);
+  await step(phone, "Private client");
+  assert.equal(
+    (await listMarketBuyerInquiries(db, "conversation-a")).items.length,
+    0,
+  );
+  const proposal = await buyingDraft(phone, "1");
+  assert.equal(
+    proposal.quantityKg,
+    1,
+    "single-digit quantities must not switch conversation language",
+  );
+  assert.equal(proposal.buyerStep, "confirm");
+  const wrong = await step(phone, "CONFIRM wrong");
+  assert.match(wrong.reply_body, /Quantity: 1 kg/);
+  assert.equal(
+    (await listMarketBuyerInquiries(db, "conversation-a")).items.length,
+    0,
+  );
+  const confirmed = await step(phone, `CONFIRM ${proposal.confirmationToken}`);
+  assert.match(
+    confirmed.reply_body,
+    /No accepted order, reserved stock or payment/,
+  );
+  const eventId = confirmed.event_id;
+  await step(phone, `CONFIRM ${proposal.confirmationToken}`, { eventId });
+  const inquiries = (
+    await listMarketBuyerInquiries(db, "conversation-a")
+  ).items.filter((item) => item.phone === phone);
+  assert.equal(inquiries.length, 1);
+  assert.equal(inquiries[0].businessName, "Sample restaurant");
+  assert.equal(inquiries[0].quantityKg, 1);
+  assert.equal(inquiries[0].grade, "A");
+  assert.equal(inquiries[0].eventId, eventId);
+  assert.equal(
+    (await listMarketBuyerInquiries(db, "conversation-b")).items.length,
+    0,
+  );
+  for (const table of ["buyer_accounts", "users", "market_channel_profiles"])
+    assert.equal(
+      (await db.query(`SELECT id FROM ${table} WHERE phone=$1`, [phone])).rows
+        .length,
+      0,
+    );
+  assert.equal((await db.query("SELECT id FROM buyer_orders")).rows.length, 0);
+});
+
+test("purchasing STOP clears unsaved requirements and stale confirmation cannot save a restarted or stopped request", async () => {
+  const phone = "+256700088202";
+  const original = await buyingDraft(phone);
+  await step(phone, "RESTART");
+  const stale = await step(phone, `CONFIRM ${original.confirmationToken}`);
+  assert.match(stale.reply_body, /AGREE/);
+  await step(phone, "AGREE");
+  await step(phone, "Another client");
+  await inbound(phone, "STOP");
+  const thread = (
+    await db.query<any>(
+      `SELECT * FROM market_channel_threads WHERE tenant_id='conversation-a' AND phone=$1`,
+      [phone],
+    )
+  ).rows[0];
+  assert.deepEqual(thread.draft, {});
+  assert.equal(thread.paused, true);
+  assert.equal(thread.consented, false);
+  await step(phone, `CONFIRM ${original.confirmationToken}`);
+  assert.equal(
+    (await listMarketBuyerInquiries(db, "conversation-a")).items.filter(
+      (item) => item.phone === phone,
+    ).length,
+    0,
+  );
+  const resumed = await step(phone, "BUY");
+  assert.match(resumed.reply_body, /AGREE/);
+});
+
+test("purchasing units and dates are explicit, and expired readback needs fresh requirements", async () => {
+  const phone = "+256700088203";
+  for (const body of [
+    "PURCHASE",
+    "AGREE",
+    "Client Three",
+    "Shop Three",
+    "Wakiso",
+    "Beans",
+    "UNKNOWN",
+  ])
+    await step(phone, body);
+  const units = await step(phone, "4 bags");
+  assert.match(units.reply_body, /kilograms/);
+  await step(phone, "2");
+  await step(phone, "SKIP");
+  const badDate = await step(phone, "2026-02-30");
+  assert.match(badDate.reply_body, /YYYY-MM-DD/);
+  const futureDate = new Date(clock.getTime() + 3 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  await step(phone, futureDate);
+  const proposal = (
+    await db.query<any>(
+      `SELECT draft FROM market_channel_threads WHERE tenant_id='conversation-a' AND phone=$1`,
+      [phone],
+    )
+  ).rows[0].draft;
+  assert.equal(proposal.quantityKg, 2);
+  await db.query(
+    `UPDATE market_channel_threads SET draft=jsonb_set(draft,'{confirmationExpiresAt}',to_jsonb($2::text)) WHERE tenant_id='conversation-a' AND phone=$1`,
+    [phone, new Date(clock.getTime() - 1000).toISOString()],
+  );
+  const expired = await step(phone, `CONFIRM ${proposal.confirmationToken}`);
+  assert.match(expired.reply_body, /expired/);
+  assert.equal(
+    (await listMarketBuyerInquiries(db, "conversation-a")).items.filter(
+      (item) => item.phone === phone,
+    ).length,
+    0,
+  );
+});
+
+test("BUYERS remains the farmer demand command while BROWSE uses the public seller catalogue without channel profile defaults", async () => {
+  const phone = "+256700088204";
+  let request: any;
+  const capture = {
+    ...options,
+    retrieve: async (value: unknown) => {
+      request = value;
+      return "Recorded source result; no order was accepted.";
+    },
+  };
+  await inbound(phone, "BUYERS Beans");
+  await drainMarketConversationJobs(db, env, capture);
+  assert.equal(request.kind, "buyers");
+  await inbound(phone, "BROWSE Maize | Nakaseke");
+  await drainMarketConversationJobs(db, env, capture);
+  assert.equal(request.kind, "produce");
+  assert.equal(request.crop, "Maize");
+  assert.equal(request.district, "Nakaseke");
+  const answer = await retrieveMarketConversationInformation(db, request, {
+    tenantId: "conversation-a",
+    phone,
+    language: "en",
+    profile: null,
+  });
+  assert.match(answer, /No currently published non-sample offer/);
+  assert.doesNotMatch(answer, /\+256/);
+  const unknown = await step(phone, "BROWSE");
+  assert.match(unknown.reply_body, /Which crop/);
+});
 
 test("WhatsApp business signup needs explicit consent and an exact read-back confirmation, without claiming an app account", async () => {
   const phone = "+256700088001";

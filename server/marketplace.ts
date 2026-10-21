@@ -133,8 +133,28 @@ export const marketServiceSchema = z
   .strict();
 
 type Row = Record<string, any>;
-const committedStock =
-  "COALESCE((SELECT sum(o.quantity_kg) FROM market_orders o WHERE o.tenant_id=s.tenant_id AND o.supply_id=s.id AND o.status IN ('accepted','fulfilled')),0)";
+/** Every inventory view uses both internal and public buyer commitments. Alias: s. */
+export const marketCommittedStockSql =
+  "(COALESCE((SELECT sum(o.quantity_kg) FROM market_orders o WHERE o.tenant_id=s.tenant_id AND o.supply_id=s.id AND o.status IN ('accepted','fulfilled')),0)+COALESCE((SELECT sum(b.quantity_kg) FROM buyer_orders b WHERE b.seller_tenant_id=s.tenant_id AND b.supply_id=s.id AND b.status IN ('accepted','fulfilled')),0))";
+const committedStock = marketCommittedStockSql;
+/** Caller holds the supply row lock when using this result to make a commitment. */
+export async function committedMarketQuantity(
+  tx: Queryable,
+  tenantId: string,
+  supplyId: string,
+) {
+  const {
+    rows: [row],
+  } = await tx.query<{ total: string }>(
+    `SELECT COALESCE(sum(quantity_kg),0)::text AS total FROM (
+      SELECT quantity_kg FROM market_orders WHERE tenant_id=$1 AND supply_id=$2 AND status IN ('accepted','fulfilled')
+      UNION ALL
+      SELECT quantity_kg FROM buyer_orders WHERE seller_tenant_id=$1 AND supply_id=$2 AND status IN ('accepted','fulfilled')
+    ) committed`,
+    [tenantId, supplyId],
+  );
+  return Number(row.total);
+}
 const iso = (value: unknown) => new Date(String(value)).toISOString();
 const dateOnly = (value: unknown) =>
   value instanceof Date
@@ -172,6 +192,7 @@ export function presentMarketProfile(row: Row): MarketProfile {
 export function presentMarketSupply(row: Row): SupplyListing {
   return {
     ...metadata(row),
+    published: Boolean(row.published),
     profileId: row.profile_id,
     crop: row.crop,
     variety: row.variety,
@@ -844,15 +865,12 @@ export function mountMarketplace(
       dateWindow(input.harvestFrom, input.harvestUntil);
       if (input.status === "available")
         freshWindow(input.harvestFrom, input.harvestUntil);
-      const availableOrders = await tx.query<{ present: boolean }>(
-        "SELECT to_regclass('market_orders') IS NOT NULL AS present",
-      );
-      if (availableOrders.rows[0]?.present) {
-        const reservation = await tx.query<{ quantity: number }>(
-          "SELECT COALESCE(sum(quantity_kg),0) AS quantity FROM market_orders WHERE tenant_id=$1 AND supply_id=$2 AND status IN ('accepted','fulfilled')",
-          [user.organizationId, previous.id],
+      {
+        const committed = await committedMarketQuantity(
+          tx,
+          user.organizationId,
+          previous.id,
         );
-        const committed = Number(reservation.rows[0]?.quantity || 0);
         if (input.quantityKg < committed)
           throw new ApiError(
             409,
